@@ -36,5 +36,19 @@ test('renders official ResQ AI brand logo image', () => {
   expect(logoImages[0].getAttribute('src')).toMatch(/\/assets\/resq-ai-(logo|emblem)\.png/);
 });
 
+test('footer tagline on homepage does not repeat ResQ AI', async () => {
+  render(<App />);
+  const demoButton = screen.getByRole('button', { name: /demo login.*dhruv/i });
+  fireEvent.click(demoButton);
+  await waitFor(() => {
+    expect(screen.getByText('Dhruv')).toBeInTheDocument();
+  });
+  const footerNote = screen.getByText(/Hold-to-SOS, offline first-aid, AI triage in 12\+ languages\./i);
+  expect(footerNote).toBeInTheDocument();
+  expect(footerNote.textContent).toBe('ResQ AI · Hold-to-SOS, offline first-aid, AI triage in 12+ languages.');
+  expect(footerNote.textContent).not.toContain('ResQ AI · ResQ AI');
+});
+
+
 
 

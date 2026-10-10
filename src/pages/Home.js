@@ -501,7 +501,9 @@ const Home = () => {
         <div style={footerBrandRow}>
           <BrandLogo variant="icon" size={18} isDecorative={true} alt="" />
           <p style={footerNote}>
-            {t?.home?.footerTagline ? `ResQ AI · ${t.home.footerTagline}` : "ResQ AI · Hold-to-SOS, offline first-aid, AI triage in 12+ languages."}
+            {t?.home?.footerTagline
+              ? `ResQ AI · ${t.home.footerTagline.replace(/^ResQ AI\s*·\s*/, "")}`
+              : "ResQ AI · Hold-to-SOS, offline first-aid, AI triage in 12+ languages."}
           </p>
         </div>
       </div>

@@ -120,7 +120,7 @@ export const TRANSLATIONS = {
       "cancel": "Cancel",
       "doNow": "Do now",
       "callNumber": "Call",
-      "footerTagline": "ResQ AI · Hold-to-SOS, offline first-aid, AI triage in 12+ languages."
+      "footerTagline": "Hold-to-SOS, offline first-aid, AI triage in 12+ languages."
     },
     "sos": {
       "title": "Emergency SOS",
@@ -324,7 +324,7 @@ export const TRANSLATIONS = {
       "cancel": "रद्द करें",
       "doNow": "अभी करें",
       "callNumber": "कॉल करें",
-      "footerTagline": "ResQ AI · होल्ड-टू-SOS, ऑफलाइन प्राथमिक चिकित्सा, 12+ भाषाओं में AI।"
+      "footerTagline": "होल्ड-टू-SOS, ऑफलाइन प्राथमिक चिकित्सा, 12+ भाषाओं में AI।"
     },
     "sos": {
       "title": "आपातकालीन SOS",
@@ -528,7 +528,7 @@ export const TRANSLATIONS = {
       "cancel": "ರದ್ದುಮಾಡಿ",
       "doNow": "ತಕ್ಷಣ ಮಾಡಿ",
       "callNumber": "ಕರೆ ಮಾಡಿ",
-      "footerTagline": "ResQ AI · ಹೋಲ್ಡ್-ಟು-SOS, ಆಫ್‌ಲೈನ್ ಪ್ರಥಮ ಚಿಕಿತ್ಸೆ, 12+ ಭಾಷೆಗಳಲ್ಲಿ AI."
+      "footerTagline": "ಹೋಲ್ಡ್-ಟು-SOS, ಆಫ್‌ಲೈನ್ ಪ್ರಥಮ ಚಿಕಿತ್ಸೆ, 12+ ಭಾಷೆಗಳಲ್ಲಿ AI."
     },
     "sos": {
       "title": "ತುರ್ತು SOS",
@@ -732,7 +732,7 @@ export const TRANSLATIONS = {
       "cancel": "रद्द करा",
       "doNow": "आत्ता करा",
       "callNumber": "कॉल करा",
-      "footerTagline": "ResQ AI · होल्ड-टू-SOS, ऑफलाइन प्रथमोपचार, 12+ भाषांमध्ये AI."
+      "footerTagline": "होल्ड-टू-SOS, ऑफलाइन प्रथमोपचार, 12+ भाषांमध्ये AI."
     },
     "sos": {
       "title": "आणीबाणी SOS",
@@ -936,7 +936,7 @@ export const TRANSLATIONS = {
       "cancel": "বাতিল",
       "doNow": "এখনই করুন",
       "callNumber": "কল করুন",
-      "footerTagline": "ResQ AI · হোল্ড-টু-SOS, অফলাইন ফার্স্ট-এইড, ১২+ ভাষায় AI।"
+      "footerTagline": "হোল্ড-টু-SOS, অফলাইন ফার্স্ট-এইড, ১২+ ভাষায় AI।"
     },
     "sos": {
       "title": "জরুরি SOS",
@@ -1140,7 +1140,7 @@ export const TRANSLATIONS = {
       "cancel": "ரத்து",
       "doNow": "உடனே செய்க",
       "callNumber": "அழைக்க",
-      "footerTagline": "ResQ AI · ஹோல்ட்-டு-SOS, ஆஃப்லைன் முதலுதவி, 12+ மொழிகளில் AI."
+      "footerTagline": "ஹோல்ட்-டு-SOS, ஆஃப்லைன் முதலுதவி, 12+ மொழிகளில் AI."
     },
     "sos": {
       "title": "அவசர SOS",
@@ -1344,7 +1344,7 @@ export const TRANSLATIONS = {
       "cancel": "రద్దు",
       "doNow": "వెంటనే చేయండి",
       "callNumber": "కాల్ చేయండి",
-      "footerTagline": "ResQ AI · హోల్డ్-టు-SOS, ఆఫ్‌లైన్ ప్రథమ చికిత్స, 12+ భాషల్లో AI."
+      "footerTagline": "హోల్డ్-టు-SOS, ఆఫ్‌లైన్ ప్రథమ చికిత్స, 12+ భాషల్లో AI."
     },
     "sos": {
       "title": "అత్యవసర SOS",
@@ -1548,7 +1548,7 @@ export const TRANSLATIONS = {
       "cancel": "રદ કરો",
       "doNow": "હમણાં કરો",
       "callNumber": "કૉલ કરો",
-      "footerTagline": "ResQ AI · હોલ્ડ-ટુ-SOS, ઑફલાઇન પ્રાથમિક સારવાર, 12+ ભાષાઓમાં AI."
+      "footerTagline": "હોલ્ડ-ટુ-SOS, ઑફલાઇન પ્રાથમિક સારવાર, 12+ ભાષાઓમાં AI."
     },
     "sos": {
       "title": "કટોકટી SOS",
