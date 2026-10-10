@@ -9,6 +9,7 @@
 
   <br />
 
+  [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://resq-ai-three.vercel.app/)
   [![React](https://img.shields.io/badge/React-19.2-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
   [![Capacitor](https://img.shields.io/badge/Capacitor-8.3-119EFF?style=for-the-badge&logo=capacitor&logoColor=white)](https://capacitorjs.com/)
   [![PWA](https://img.shields.io/badge/PWA-Cache--First-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/progressive-web-apps/)
@@ -19,6 +20,11 @@
 
   <br />
 
+  ### 🚀 **[Try the Live Web Application: resq-ai-three.vercel.app](https://resq-ai-three.vercel.app/)**
+
+  <br />
+
+  [Live Demo](https://resq-ai-three.vercel.app/) •
   [Key Features](#-key-features) •
   [Live Demo Flow](#-90-second-demo-walkthrough) •
   [Architecture](#-system-architecture) •
@@ -32,6 +38,7 @@
 
 ## 📌 Table of Contents
 
+- [Live Deployment (Vercel)](#-live-deployment-vercel)
 - [The Problem We Solve](#-the-problem-we-solve)
 - [Key Features](#-key-features)
 - [Supported Languages (12+)](#-supported-languages-12)
@@ -51,6 +58,19 @@
 - [Post-Hackathon Roadmap](#-post-hackathon-roadmap)
 - [Medical Disclaimer](#-medical-disclaimer)
 - [License](#-license)
+
+---
+
+## 🚀 Live Deployment (Vercel)
+
+ResQ AI is deployed and live in production on **Vercel**:
+
+> 🔗 **Production URL:** [https://resq-ai-three.vercel.app/](https://resq-ai-three.vercel.app/)
+
+### 🌟 Instant Evaluator Testing
+- **1-Click Demo Evaluation:** Click **"Demo Login (Dhruv)"** on the login screen to enter the emergency response dashboard with pre-configured emergency contacts and profile state.
+- **Installable PWA Experience:** Open the link on Google Chrome, Edge, or mobile Safari and select **"Add to Home Screen"** or **"Install App"** to install the application locally.
+- **Test 100% Offline Resilience:** After loading the page, disconnect your Wi-Fi or toggle **Airplane Mode**: the bundled clinical decision trees, CPR metronome, multilingual translations, and offline keyword matcher remain 100% functional.
 
 ---
 
@@ -267,7 +287,7 @@ Follow this step-by-step evaluation script to test all core features in under 90
 
 ```
 [00:00 - 00:15] 1-CLICK DEMO AUTH
-  1. Open http://localhost:3000
+  1. Open https://resq-ai-three.vercel.app/ (or http://localhost:3000 locally)
   2. Click "Demo Login (Dhruv)" — instantly bypasses credentials into the emergency hub.
   3. Pre-loaded emergency contacts and default preferences populate immediately.
 
