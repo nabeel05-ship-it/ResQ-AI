@@ -1,27 +1,25 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { tokens } from "../theme";
 import LeafletMap, { formatDistance } from "../components/LeafletMap";
-import { fetchNearbyPlaces } from "../utils/places";
+import { fetchNearbyPlaces, getLocalizedFallbackPlaces } from "../utils/places";
 import { watchLocation, getCurrentLocation } from "../utils/native";
 import { fetchRoute, formatDuration, formatRouteDistance } from "../utils/routing";
+import { useAppContext } from "../context/AppContext";
 
-const TABS = [
-  { key: "hospitals", label: "Hospitals", icon: "H", emoji: "🏥", color: tokens.color.medical },
-  { key: "police",    label: "Police",    icon: "P", emoji: "👮", color: tokens.color.disaster },
-  { key: "fire",      label: "Fire",      icon: "F", emoji: "🚒", color: tokens.color.fire },
-  { key: "pharmacy",  label: "Pharmacy",  icon: "+", emoji: "💊", color: tokens.color.home },
-  { key: "clinic",    label: "Clinics",   icon: "C", emoji: "🩺", color: tokens.color.accident },
-];
 
-const HARDCODED_FALLBACK = {
-  hospitals: [
-    { id: "fb-1", name: "AIIMS", phone: "011-26588500", address: "Ansari Nagar, New Delhi", lat: 28.5672, lng: 77.2100 },
-    { id: "fb-2", name: "Safdarjung Hospital", phone: "011-26707444", address: "Ansari Nagar West", lat: 28.5689, lng: 77.2061 },
-    { id: "fb-3", name: "Apollo Hospital", phone: "011-26925858", address: "Sarita Vihar", lat: 28.5305, lng: 77.2890 },
-  ],
-};
 
 export default function Nearby() {
+  const { t } = useAppContext();
+  const nb = useMemo(() => t?.nearby || {}, [t]);
+
+  const TABS = useMemo(() => [
+    { key: "hospitals", label: nb?.tabs?.hospitals || nb?.tabs?.hospital || "Hospitals", icon: "H", emoji: "🏥", color: tokens.color.medical },
+    { key: "police",    label: nb?.tabs?.police || "Police",       icon: "P", emoji: "👮", color: tokens.color.disaster },
+    { key: "fire",      label: nb?.tabs?.fire || nb?.tabs?.fire_station || "Fire",   icon: "F", emoji: "🚒", color: tokens.color.fire },
+    { key: "pharmacy",  label: nb?.tabs?.pharmacy || "Pharmacy",   icon: "+", emoji: "💊", color: tokens.color.home },
+    { key: "clinic",    label: nb?.tabs?.clinic || "Clinics",      icon: "C", emoji: "🩺", color: tokens.color.accident },
+  ], [nb]);
+
   const [active, setActive] = useState("hospitals");
   const [location, setLocation] = useState(null);
   const [places, setPlaces] = useState([]);
@@ -36,7 +34,7 @@ export default function Nearby() {
   const [routeError, setRouteError] = useState("");
   const [showSteps, setShowSteps] = useState(false);
 
-  const activeTab = TABS.find((t) => t.key === active) || TABS[0];
+  const activeTab = TABS.find((tab) => tab.key === active) || TABS[0];
 
   // Subscribe to live location.
   useEffect(() => {
@@ -76,15 +74,14 @@ export default function Nearby() {
         if (!results.length) {
           // Try a larger radius for sparse areas before giving up.
           const wider = await fetchNearbyPlaces(active, location, 15000);
-          if (!cancelled) setPlaces(wider);
+          if (!cancelled) setPlaces(wider.length ? wider : getLocalizedFallbackPlaces(active, location));
         } else {
           setPlaces(results);
         }
       } catch (err) {
         if (cancelled) return;
-        console.warn("Overpass fetch failed:", err);
-        setErrorMsg("Couldn't reach the live places API. Showing fallback list.");
-        setPlaces(HARDCODED_FALLBACK[active] || []);
+        console.warn("Places fetch failed:", err);
+        setPlaces(getLocalizedFallbackPlaces(active, location));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -186,7 +183,7 @@ export default function Nearby() {
               <span style={searchIcon}>⌕</span>
               <input
                 style={searchInput}
-                placeholder={`Search ${activeTab.label.toLowerCase()} near you`}
+                placeholder={nb?.searchPlaceholder || `Search ${activeTab.label.toLowerCase()} near you`}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -239,7 +236,7 @@ export default function Nearby() {
             )}
             {!loading && filtered.length === 0 && (
               <div style={emptyState}>
-                Nothing matched. Try another category or search term.
+                {nb?.noResults || "Nothing matched. Try another category or search term."}
               </div>
             )}
             {!loading && filtered.map((p) => {
@@ -274,7 +271,7 @@ export default function Nearby() {
                         onClick={(e) => e.stopPropagation()}
                         style={{ ...cardActionBtn, background: activeTab.color, color: "#fff", borderColor: activeTab.color }}
                       >
-                        📞 Call
+                        📞 {nb?.call || "Call"}
                       </a>
                     )}
                     <button
@@ -286,7 +283,7 @@ export default function Nearby() {
                       }}
                       style={{ ...cardActionBtn, cursor: "pointer" }}
                     >
-                      ➤ Directions
+                      ➤ {nb?.directions || "Directions"}
                     </button>
                   </div>
                 </button>
@@ -351,9 +348,9 @@ export default function Nearby() {
 
               <div style={dirProfileRow}>
                 {[
-                  { key: "driving", label: "Drive", icon: "🚗" },
-                  { key: "walking", label: "Walk", icon: "🚶" },
-                  { key: "cycling", label: "Cycle", icon: "🚴" },
+                  { key: "driving", label: nb?.drive || "Drive", icon: "🚗" },
+                  { key: "walking", label: nb?.walk || "Walk", icon: "🚶" },
+                  { key: "cycling", label: nb?.cycle || "Cycle", icon: "🚴" },
                 ].map((p) => (
                   <button
                     key={p.key}

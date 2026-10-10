@@ -1,21 +1,26 @@
 import React, { useState } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { motion, useReducedMotion } from "motion/react";
 import { useAppContext } from "../context/AppContext";
 import LangPickerModal from "./LangPickerModal";
+import BrandLogo from "./BrandLogo";
 import { tokens, styles as S } from "../theme";
 
-const NAV_ITEMS = [
-  { to: "/", label: "Home", end: true },
-  { to: "/guidance", label: "Ask AI" },
-  { to: "/nearby", label: "Nearby" },
-];
 
 export default function AppShell() {
-  const { user, primaryLang, selectedLanguages, logout } = useAppContext();
+  const { user, primaryLang, selectedLanguages, currentLangObj, logout, t } = useAppContext();
   const navigate = useNavigate();
+  const location = useLocation();
+  const shouldReduceMotion = useReducedMotion();
   const [menuOpen, setMenuOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const navItems = [
+    { to: "/", label: t?.nav?.home || "Home", end: true },
+    { to: "/guidance", label: t?.nav?.askAi || "Ask AI" },
+    { to: "/nearby", label: t?.nav?.nearby || "Nearby" },
+  ];
 
   return (
     <div style={shellPage}>
@@ -120,13 +125,12 @@ export default function AppShell() {
       {/* Top nav */}
       <header style={topNav}>
         <div style={navInner}>
-          <button onClick={() => navigate("/")} style={brandBtn}>
-            <span style={brandDot} />
-            <span style={brandText}>ResQ AI</span>
+          <button onClick={() => navigate("/")} style={brandBtn} aria-label="ResQ AI Home">
+            <BrandLogo variant="compact" size={32} theme="dark" showTagline={false} />
           </button>
 
           <nav className="nav-links-desktop" style={navLinks}>
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -139,8 +143,8 @@ export default function AppShell() {
           </nav>
 
           <div style={navRight}>
-            <a href="tel:112" style={callBtn} title="Call 112">
-              <span style={callBtnDot} /> <span className="nav-call-label">112</span>
+            <a href="tel:112" style={callBtn} title={t?.nav?.emergencyCall || "Call 112"}>
+              <span style={callBtnDot} /> <span className="nav-call-label">{t?.nav?.call112 || "112"}</span>
             </a>
             <button
               className="hamburger"
@@ -151,12 +155,23 @@ export default function AppShell() {
               ☰
             </button>
             <button
-              style={S.iconBtn}
+              style={{
+                ...S.iconBtn,
+                width: "auto",
+                minWidth: "36px",
+                padding: "0 8px",
+                gap: "5px",
+                display: "inline-flex",
+                alignItems: "center",
+              }}
               onClick={() => setLangOpen(true)}
-              title="Change language"
-              aria-label="Change language"
+              title={t?.nav?.changeLanguages || "Change language"}
+              aria-label={t?.nav?.changeLanguages || "Change language"}
             >
-              🌐
+              <span style={{ fontSize: "14px" }}>🌐</span>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: tokens.color.primary || "#4f46e5" }}>
+                {currentLangObj?.scriptId || "EN"}
+              </span>
             </button>
             <div style={{ position: "relative" }}>
               <button
@@ -177,7 +192,7 @@ export default function AppShell() {
                     onClick={() => setMenuOpen(false)}
                   />
                   <div className="user-menu">
-                    <div className="menu-meta">Signed in as</div>
+                    <div className="menu-meta">{t?.nav?.signedInAs || "Signed in as"}</div>
                     <div style={{ padding: "4px 12px 8px", fontSize: "13px", color: tokens.color.text, fontWeight: 600 }}>
                       {user?.name}
                     </div>
@@ -185,7 +200,7 @@ export default function AppShell() {
                       {user?.email}
                     </div>
                     <div style={{ height: "1px", background: tokens.color.border, margin: "4px 0" }} />
-                    <div className="menu-meta">Languages</div>
+                    <div className="menu-meta">{t?.nav?.languages || "Languages"}</div>
                     <div style={{ padding: "0 12px 8px", fontSize: "12px", color: tokens.color.textMuted }}>
                       {selectedLanguages?.join(" · ") || primaryLang}
                     </div>
@@ -193,7 +208,7 @@ export default function AppShell() {
                       className="menu-item"
                       onClick={() => { setMenuOpen(false); setLangOpen(true); }}
                     >
-                      Change languages
+                      {t?.nav?.changeLanguages || "Change languages"}
                     </button>
                     <div style={{ height: "1px", background: tokens.color.border, margin: "4px 0" }} />
                     <button
@@ -201,7 +216,7 @@ export default function AppShell() {
                       style={{ color: tokens.color.danger, fontWeight: 600 }}
                       onClick={logout}
                     >
-                      Log out
+                      {t?.nav?.logout || "Log out"}
                     </button>
                   </div>
                 </>
@@ -217,9 +232,8 @@ export default function AppShell() {
           <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)} />
           <aside className="mobile-nav-sheet" role="dialog" aria-label="Navigation">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={brandDot} />
-                <span style={brandText}>ResQ AI</span>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <BrandLogo variant="compact" size={32} theme="dark" showTagline={true} />
               </div>
               <button
                 style={S.iconBtn}
@@ -229,7 +243,7 @@ export default function AppShell() {
                 ✕
               </button>
             </div>
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
@@ -246,29 +260,37 @@ export default function AppShell() {
               style={{ background: "transparent", border: "none", textAlign: "left", fontFamily: tokens.font.family, cursor: "pointer", width: "100%" }}
               onClick={() => { setMobileNavOpen(false); setLangOpen(true); }}
             >
-              🌐 Change languages
+              🌐 {t?.nav?.changeLanguages || "Change languages"}
             </button>
             <button
               className="mobile-nav-link"
               style={{ background: "transparent", border: "none", textAlign: "left", fontFamily: tokens.font.family, cursor: "pointer", width: "100%", color: tokens.color.danger }}
               onClick={logout}
             >
-              Log out
+              {t?.nav?.logout || "Log out"}
             </button>
             <div style={{ marginTop: "auto", paddingTop: "16px", fontSize: "12px", color: tokens.color.textSubtle }}>
-              Signed in as<br />
+              {t?.nav?.signedInAs || "Signed in as"}<br />
               <strong style={{ color: tokens.color.text, fontWeight: 600 }}>{user?.name}</strong>
               <div style={{ fontSize: "11px", marginTop: "4px" }}>
-                Languages: {selectedLanguages?.join(", ") || primaryLang}
+                {t?.nav?.languages || "Languages"}: {selectedLanguages?.join(", ") || primaryLang}
               </div>
             </div>
           </aside>
         </>
       )}
 
-      {/* Page content */}
+      {/* Page content with subtle, fast transition */}
       <main style={mainStyle}>
-        <Outlet />
+        <motion.div
+          key={location.pathname}
+          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          style={{ width: "100%", height: "100%" }}
+        >
+          <Outlet />
+        </motion.div>
       </main>
     </div>
   );
@@ -313,23 +335,6 @@ const brandBtn = {
   fontFamily: tokens.font.family,
   whiteSpace: "nowrap",
   flexShrink: 0,
-};
-
-const brandDot = {
-  width: "10px",
-  height: "10px",
-  borderRadius: tokens.radius.pill,
-  background: tokens.color.danger,
-  boxShadow: "0 0 0 3px rgba(220,38,38,0.18)",
-  flexShrink: 0,
-};
-
-const brandText = {
-  fontSize: "16px",
-  fontWeight: 800,
-  letterSpacing: "-0.01em",
-  color: tokens.color.text,
-  whiteSpace: "nowrap",
 };
 
 const navLinks = {

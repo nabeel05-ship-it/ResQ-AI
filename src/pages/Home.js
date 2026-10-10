@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "motion/react";
 import { useAppContext } from "../context/AppContext";
 import emergencyData from "../data/emergencyData";
 import AIGuide from "../components/AIGuide";
 import SOSButton from "../components/SOSButton";
+import BrandLogo from "../components/BrandLogo";
 import { TRIAGE_TREES, TRIAGE_BY_CATEGORY } from "../data/triageTrees";
 import { tokens, styles as S } from "../theme";
 import { transcribeAudio } from "../utils/groqAudio";
@@ -11,6 +13,7 @@ import { recordUtterance } from "../utils/recorder";
 import { classifyEmergencyImage, triageTreeFor } from "../utils/groqVision";
 
 const Home = () => {
+  const shouldReduceMotion = useReducedMotion();
   const [inputText, setInputText] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState("");
@@ -31,12 +34,12 @@ const Home = () => {
   }, [isNewUser, setIsNewUser]);
 
   const categories = [
-    { id: "medical", icon: "❤", title: t.medical, color: tokens.color.medical },
-    { id: "fire", icon: "🔥", title: t.fire, color: tokens.color.fire },
-    { id: "accident", icon: "🚗", title: t.accident, color: tokens.color.accident },
-    { id: "crime", icon: "🚨", title: t.crime, color: tokens.color.crime },
-    { id: "disaster", icon: "🌊", title: t.disaster, color: tokens.color.disaster },
-    { id: "home", icon: "⚡", title: t.home, color: tokens.color.home },
+    { id: "medical", icon: "❤", title: t?.home?.categories?.medical || "Medical", color: tokens.color.medical },
+    { id: "fire", icon: "🔥", title: t?.home?.categories?.fire || "Fire", color: tokens.color.fire },
+    { id: "accident", icon: "🚗", title: t?.home?.categories?.accident || "Accident", color: tokens.color.accident },
+    { id: "crime", icon: "🚨", title: t?.home?.categories?.crime || "Crime", color: tokens.color.crime },
+    { id: "disaster", icon: "🌊", title: t?.home?.categories?.disaster || "Disaster", color: tokens.color.disaster },
+    { id: "home", icon: "⚡", title: t?.home?.categories?.home || "Home", color: tokens.color.home },
   ];
 
   const handleSearch = (text) => {
@@ -145,17 +148,17 @@ const Home = () => {
   const offlineGuides = Object.values(TRIAGE_TREES);
 
   const quickNumbers = [
-    { num: "112", label: "All emergencies" },
-    { num: "102", label: "Ambulance" },
-    { num: "101", label: "Fire" },
-    { num: "100", label: "Police" },
+    { num: "112", label: t?.home?.allEmergencies || "All emergencies" },
+    { num: "102", label: t?.home?.ambulance || "Ambulance" },
+    { num: "101", label: t?.home?.fireDept || "Fire" },
+    { num: "100", label: t?.home?.police || "Police" },
   ];
 
   const nearbyQuick = [
-    { icon: "🏥", label: "Hospitals", color: tokens.color.medical, key: "hospitals" },
-    { icon: "👮", label: "Police", color: tokens.color.disaster, key: "police" },
-    { icon: "🚒", label: "Fire", color: tokens.color.fire, key: "fire" },
-    { icon: "🚑", label: "Ambulance", color: tokens.color.home, key: "ambulance" },
+    { icon: "🏥", label: t?.nearby?.tabs?.hospitals || t?.nearby?.tabs?.hospital || "Hospitals", color: tokens.color.medical, key: "hospitals" },
+    { icon: "👮", label: t?.nearby?.tabs?.police || "Police", color: tokens.color.disaster, key: "police" },
+    { icon: "🚒", label: t?.nearby?.tabs?.fire || t?.nearby?.tabs?.fire_station || t?.home?.fireDept || "Fire", color: tokens.color.fire, key: "fire" },
+    { icon: "🚑", label: t?.home?.ambulance || "Ambulance", color: tokens.color.home, key: "ambulance" },
   ];
 
   return (
@@ -279,15 +282,15 @@ const Home = () => {
         {/* Greeting hero */}
         <section style={hero}>
           <div>
-            <p style={heroEyebrow}>Welcome back</p>
-            <h1 style={heroTitle}>Hi, {user?.name || "there"}.</h1>
+            <p style={heroEyebrow}>{t?.home?.welcomeBack || "Welcome back"}</p>
+            <h1 style={heroTitle}>{t?.home?.hi || "Hi"}, {user?.name || t?.home?.there || "there"}.</h1>
             <p style={heroSub}>
-              In an emergency, hold the SOS button. Help arrives faster when your trusted contacts know where you are.
+              {t?.home?.heroSub || "In an emergency, hold the SOS button. Help arrives faster when your trusted contacts know where you are."}
             </p>
           </div>
           <div style={heroBadge}>
             <span style={{ ...statusDot, background: tokens.color.success }} />
-            <span style={heroBadgeText}>System ready · Offline first-aid available</span>
+            <span style={heroBadgeText}>{t?.home?.systemReady || "System ready · Offline first-aid available"}</span>
           </div>
         </section>
 
@@ -302,7 +305,7 @@ const Home = () => {
           <div className="side-col" style={sideCol}>
             <div style={{ ...S.card, padding: "8px" }}>
               <div style={{ ...sectionHead, padding: "12px 12px 6px" }}>
-                <span>Emergency numbers</span>
+                <span>{t?.home?.quickNumbers || "Emergency numbers"}</span>
               </div>
               {quickNumbers.map((q, i) => (
                 <a
@@ -323,12 +326,12 @@ const Home = () => {
 
             <div style={{ ...S.card, padding: "8px" }}>
               <div style={{ ...sectionHead, padding: "12px 12px 6px" }}>
-                <span>Nearby</span>
+                <span>{t?.nav?.nearby || "Nearby"}</span>
                 <button
                   onClick={() => navigate("/nearby")}
                   style={viewAllBtn}
                 >
-                  View all →
+                  {t?.nearby?.tabs?.all ? `${t.nearby.tabs.all} →` : "View all →"}
                 </button>
               </div>
               {nearbyQuick.map((n, i) => (
@@ -355,15 +358,17 @@ const Home = () => {
         {/* Offline first-aid */}
         <section>
           <div style={{ ...sectionHead, marginBottom: "12px" }}>
-            <span>Offline first-aid</span>
-            <span style={badgeOffline}>● Works without internet</span>
+            <span>{t?.home?.offlineSection || "Offline first-aid"}</span>
+            <span style={badgeOffline}>● {t?.home?.worksOffline || "Works without internet"}</span>
           </div>
           <div className="offline-grid" style={offlineGrid}>
             {offlineGuides.map((g) => (
-              <button
+              <motion.button
                 key={g.id}
                 className="home-tile"
                 onClick={() => navigate(`/triage/${g.id}`)}
+                whileHover={shouldReduceMotion ? undefined : { y: -2, transition: { duration: 0.15 } }}
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.98, transition: { duration: 0.1 } }}
                 style={{
                   ...S.card,
                   padding: "20px",
@@ -373,6 +378,7 @@ const Home = () => {
                   gap: "12px",
                   alignItems: "flex-start",
                   fontFamily: tokens.font.family,
+                  cursor: "pointer",
                 }}
               >
                 <div style={{ ...iconChip, color: g.color, background: `${g.color}14` }}>
@@ -382,16 +388,16 @@ const Home = () => {
                   <div style={tileTitle}>{g.title[primaryLang] || g.title.English}</div>
                   <div style={tileMeta}>
                     <span style={tileMetaText}>
-                      {g.steps[primaryLang]?.length || g.steps.English.length} steps
+                      {g.steps[primaryLang]?.length || g.steps.English.length} {t?.home?.stepsCount || "steps"}
                     </span>
                     <span style={{ color: tokens.color.borderStrong }}>·</span>
                     <span style={{ ...tileMetaText, color: g.color, fontWeight: 600 }}>
-                      {g.severity === "critical" ? "Critical" : "Serious"}
+                      {g.severity === "critical" ? (t?.home?.critical || "Critical") : (t?.home?.serious || "Serious")}
                     </span>
                   </div>
                 </div>
-                <div style={tileFooter}>Open guide →</div>
-              </button>
+                <div style={tileFooter}>{t?.home?.openGuide || "Open guide →"}</div>
+              </motion.button>
             ))}
           </div>
         </section>
@@ -399,8 +405,8 @@ const Home = () => {
         {/* Ask AI */}
         <section>
           <div style={{ ...sectionHead, marginBottom: "12px" }}>
-            <span>Ask AI</span>
-            <span style={badgeOnline}>● Needs internet · multilingual + vision</span>
+            <span>{t?.home?.askAiSection || "Ask AI"}</span>
+            <span style={badgeOnline}>● {t?.home?.needsInternet || "Needs internet · multilingual + vision"}</span>
           </div>
           <div style={{ ...S.card, padding: "20px" }}>
             <div style={askRow}>
@@ -416,7 +422,7 @@ const Home = () => {
                 className="home-input"
                 style={{ ...S.input, fontSize: "15px", flex: 1 }}
                 type="text"
-                placeholder={t.describeEmergency}
+                placeholder={t?.home?.describeEmergency || t.describeEmergency}
                 value={inputText}
                 onChange={(e) => { setInputText(e.target.value); setError(""); }}
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
@@ -431,8 +437,8 @@ const Home = () => {
                   flexShrink: 0,
                 }}
                 onClick={() => fileInputRef.current?.click()}
-                aria-label="Identify with photo"
-                title="Identify with photo"
+                aria-label={t?.home?.photoIdentify || "Identify with photo"}
+                title={t?.home?.photoIdentify || "Identify with photo"}
               >
                 📷
               </button>
@@ -446,12 +452,15 @@ const Home = () => {
                   flexShrink: 0,
                 }}
                 onClick={handleVoice}
-                aria-label="Voice input"
-                title="Voice input"
+                aria-label={t?.guidance?.micTitle || "Voice input"}
+                title={t?.guidance?.micTitle || "Voice input"}
               >
                 {isListening ? "●" : "🎤"}
               </button>
-              <button
+              <motion.button
+                whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+                transition={{ duration: 0.1 }}
                 style={{
                   ...S.primaryBtn,
                   padding: "12px 22px",
@@ -461,33 +470,40 @@ const Home = () => {
                 }}
                 onClick={() => handleSearch()}
               >
-                Ask AI →
-              </button>
+                {t?.nav?.askAi || "Ask AI"} →
+              </motion.button>
             </div>
             {error && <p style={errorText}>{error}</p>}
 
             <div style={categoryRow}>
-              <span style={categoryRowLabel}>Or pick:</span>
+              <span style={categoryRowLabel}>{t?.guidance?.tryAsking || "Or pick:"}</span>
               {categories.map((cat) => (
-                <button
+                <motion.button
                   key={cat.id}
+                  whileHover={shouldReduceMotion ? undefined : { scale: 1.03 }}
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
+                  transition={{ duration: 0.1 }}
                   onClick={() => handleCategory(cat)}
                   style={{
                     ...categoryPill,
                     color: cat.color,
                     borderColor: `${cat.color}44`,
+                    cursor: "pointer",
                   }}
                 >
                   <span aria-hidden>{cat.icon}</span> {cat.title}
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
         </section>
 
-        <p style={footerNote}>
-          ResQ AI · Hold-to-SOS, offline first-aid, AI triage in 12+ languages.
-        </p>
+        <div style={footerBrandRow}>
+          <BrandLogo variant="icon" size={18} isDecorative={true} alt="" />
+          <p style={footerNote}>
+            {t?.home?.footerTagline ? `ResQ AI · ${t.home.footerTagline}` : "ResQ AI · Hold-to-SOS, offline first-aid, AI triage in 12+ languages."}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -776,11 +792,19 @@ const categoryPill = {
   transition: "transform 0.1s",
 };
 
+const footerBrandRow = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "8px",
+  margin: "8px 0 0",
+};
+
 const footerNote = {
   fontSize: "12px",
   color: tokens.color.textSubtle,
   textAlign: "center",
-  margin: "8px 0 0",
+  margin: 0,
 };
 
 // Vision modal helpers + styles ────────────────────────────────────────────

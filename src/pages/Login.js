@@ -1,629 +1,665 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppContext } from "../context/AppContext";
-import { tokens, styles as S } from "../theme";
-
-const LANGS = [
-  { code: "English",  native: "English",   region: "Default" },
-  { code: "Hindi",    native: "हिन्दी",    region: "उत्तर भारत" },
-  { code: "Kannada",  native: "ಕನ್ನಡ",     region: "Karnataka" },
-  { code: "Marathi",  native: "मराठी",     region: "Maharashtra" },
-  { code: "Bengali",  native: "বাংলা",     region: "W. Bengal" },
-  { code: "Tamil",    native: "தமிழ்",     region: "Tamil Nadu" },
-  { code: "Telugu",   native: "తెలుగు",    region: "Andhra/TG" },
-  { code: "Gujarati", native: "ગુજરાતી",   region: "Gujarat" },
-  { code: "Punjabi",  native: "ਪੰਜਾਬੀ",   region: "Punjab" },
-  { code: "Malayalam",native: "മലയാളം",    region: "Kerala" },
-  { code: "Urdu",     native: "اردو",      region: "All India" },
-  { code: "Odia",     native: "ଓଡ଼ିଆ",     region: "Odisha" },
-];
+import { SUPPORTED_LANGUAGES } from "../i18n/translations";
+import BrandLogo from "../components/BrandLogo";
+import LangPickerModal from "../components/LangPickerModal";
+import "./Login.css";
 
 const AI_LANG_PREVIEW = {
-  English:   "I'll guide you in English in any emergency.",
-  Hindi:     "हिन्दी में आपातकाल में मार्गदर्शन करूँगा।",
-  Kannada:   "ಕನ್ನಡದಲ್ಲಿ ತುರ್ತು ಸಂದರ್ಭದಲ್ಲಿ ಮಾರ್ಗದರ್ಶನ ಮಾಡುತ್ತೇನೆ.",
-  Marathi:   "मराठीत आपत्कालीन मार्गदर्शन करेन.",
-  Bengali:   "বাংলায় জরুরি পরিস্থিতিতে সাহায্য করব।",
-  Tamil:     "தமிழில் அவசர நிலையில் வழிகாட்டுவேன்.",
-  Telugu:    "తెలుగులో అత్యవసర పరిస్థితిలో సహాయం చేస్తాను.",
-  Gujarati:  "ગુજરાતીમાં કટોકટીમાં માર્ગદર્શન આપીશ.",
-  Punjabi:   "ਪੰਜਾਬੀ ਵਿੱਚ ਐਮਰਜੈਂਸੀ ਵਿੱਚ ਮਦਦ ਕਰਾਂਗਾ।",
-  Malayalam: "മലയാളത്തിൽ അടിയന്തര ഘട്ടത്തിൽ സഹായിക്കും.",
-  Urdu:      "اردو میں ہنگامی صورتحال میں رہنمائی کروں گا۔",
-  Odia:      "ଓଡ଼ିଆରେ ଜରୁରୀ ପରିସ୍ଥିତିରେ ସାହାଯ୍ୟ କରିବି।",
+  English: "I will guide you step-by-step through any emergency.",
+  Hindi: "हिन्दी में आपातकाल में स्पष्ट मार्गदर्शन करूँगा।",
+  Kannada: "ಕನ್ನಡದಲ್ಲಿ ತುರ್ತು ಸಂದರ್ಭದಲ್ಲಿ ಹಂತ ಹಂತವಾಗಿ ಮಾರ್ಗದರ್ಶನ ಮಾಡುತ್ತೇನೆ.",
+  Marathi: "मराठीत आपत्कालीन परिस्थितीत टप्प्याटप्प्याने मार्गदर्शन करेन.",
+  Bengali: "বাংলায় জরুরি পরিস্থিতিতে ধাপে ধাপে সাহায্য করব।",
+  Tamil: "தமிழில் அவசர நிலையில் படிப்படியாக வழிகாட்டுவேன்.",
+  Telugu: "తెలుగులో అత్యవసర పరిస్థితిలో దశలవారీగా సహాయం చేస్తాను.",
+  Gujarati: "ગુજરાતીમાં કટોકટીમાં સ્પષ્ટ માર્ગદર્શન આપીશ.",
+  Punjabi: "ਪੰਜਾਬੀ ਵਿੱਚ ਐਮਰਜੈਂਸੀ ਵਿੱਚ ਕਦਮ-ਦਰ-ਕਦਮ ਮਦਦ ਕਰਾਂਗਾ।",
+  Malayalam: "മലയാളത്തിൽ അടിയന്തര ഘട്ടത്തിൽ ഘട്ടങ്ങളായി സഹായിക്കും.",
+  Urdu: "اردو میں ہنگامی صورتحال میں مرحلہ وار رہنمائی کروں گا۔",
+  Odia: "ଓଡ଼ିଆରେ ଜରୁରୀ ପରିସ୍ଥିତିରେ ସଠିକ୍ ସାହାଯ୍ୟ କରିବି।",
 };
 
-const FEATURES = [
-  { icon: "🆘", title: "One-tap SOS", desc: "Hold to share live GPS with your trusted contacts via WhatsApp or SMS." },
-  { icon: "📴", title: "Works offline", desc: "Five life-saving first-aid guides bundled in. No network? No problem." },
-  { icon: "🤖", title: "AI triage", desc: "Vision and chat models analyze injuries, accidents, and emergencies." },
-  { icon: "🌐", title: "12+ Indian languages", desc: "Type in Hindi, Tamil, Telugu, even Hinglish. AI replies in the same script." },
-];
-
 export default function Login() {
-  const [step, setStep] = useState("auth");
-  const [mode, setMode] = useState("login");
+  const [step, setStep] = useState("auth"); // "auth" | "language"
+  const [mode, setMode] = useState("login"); // "login" | "signup"
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedLangs, setSelectedLangs] = useState(["English"]);
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, saveLanguages, user } = useAppContext();
+  const [langModalOpen, setLangModalOpen] = useState(false);
+
+  const { login, user, t, language, setLanguage, currentLangObj } = useAppContext();
   const navigate = useNavigate();
 
+  // If already authenticated and not configuring languages, navigate to home
   useEffect(() => {
-    if (user) navigate("/");
-  }, [user, navigate]);
+    if (user && step !== "language") {
+      navigate("/");
+    }
+  }, [user, navigate, step]);
 
-  const handleAuth = (e) => {
+  const validateEmail = (val) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
+  };
+
+  const handleAuthSubmit = (e) => {
     e.preventDefault();
     setError("");
-    if (!email.trim()) { setError("Please enter your email."); return; }
-    if (!password.trim()) { setError("Please enter your password."); return; }
-    if (mode === "signup" && !name.trim()) { setError("Please enter your name."); return; }
-    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
-    setLoading(true);
-    setTimeout(() => {
-      const userName = mode === "signup" ? name.trim() : email.split("@")[0];
-      login(userName, email.trim());
-      setLoading(false);
-      setStep("language");
-    }, 600);
-  };
 
-  const handleGoogle = () => {
-    setLoading(true);
-    setTimeout(() => {
-      login("Google User", "google@gmail.com");
-      setLoading(false);
-      setStep("language");
-    }, 600);
-  };
+    const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
 
-  const toggleLang = (code) => {
-    if (selectedLangs.includes(code)) {
-      if (selectedLangs.length === 1) return;
-      setSelectedLangs(selectedLangs.filter((l) => l !== code));
-    } else {
-      if (selectedLangs.length >= 5) return;
-      setSelectedLangs([...selectedLangs, code]);
+    if (!cleanEmail) {
+      setError(t?.auth?.errors?.fillAll || "Please enter your email address.");
+      return;
     }
+
+    if (!validateEmail(cleanEmail)) {
+      setError(t?.auth?.errors?.invalidCreds || "Please enter a valid email address.");
+      return;
+    }
+
+    if (mode === "signup" && !name.trim()) {
+      setError(t?.auth?.errors?.fillAll || "Please enter your full name.");
+      return;
+    }
+
+    if (!cleanPassword) {
+      setError(t?.auth?.errors?.fillAll || "Please enter your password.");
+      return;
+    }
+
+    if (cleanPassword.length < 6) {
+      setError(t?.auth?.errors?.pwShort || "Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (mode === "signup" && cleanPassword !== confirmPassword.trim()) {
+      setError(t?.auth?.errors?.pwMatch || "Passwords do not match. Please re-enter.");
+      return;
+    }
+
+    setLoading(true);
+
+    setTimeout(() => {
+      const userName = mode === "signup" ? name.trim() : cleanEmail.split("@")[0];
+      login(userName, cleanEmail);
+      setLoading(false);
+      setStep("language");
+    }, 400);
   };
 
-  const handleLangSave = () => {
-    saveLanguages(selectedLangs);
-    navigate("/");
+  const handleDemoLogin = () => {
+    setError("");
+    setName("Dhruv");
+    setEmail("dhruv@resq.ai");
+    setPassword("demo123456");
+    setLoading(true);
+
+    setTimeout(() => {
+      login("Dhruv", "dhruv@resq.ai");
+      setLoading(false);
+      navigate("/");
+    }, 350);
   };
 
-  const primary = selectedLangs[0] || "English";
-  const aiLine = AI_LANG_PREVIEW[primary] || AI_LANG_PREVIEW.English;
+  const currentPrimary = language || "English";
+  const aiLine = AI_LANG_PREVIEW[currentPrimary] || AI_LANG_PREVIEW.English;
 
-  // ─── LANGUAGE STEP ──────────────────────────────────────────────────────
+  const capabilities = [
+    {
+      title: t?.auth?.capabilities?.offline || "Emergency Guidance",
+      desc: t?.home?.heroSub || "Understand clear, step-by-step first-aid instructions.",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="M12 8v8" />
+          <path d="M8 12h8" />
+        </svg>
+      ),
+    },
+    {
+      title: t?.auth?.capabilities?.multilingual || "Your Language",
+      desc: t?.nav?.languages ? `12 ${t.nav.languages}` : "Access emergency guidance in supported Indian languages.",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="2" y1="12" x2="22" y2="12" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+      ),
+    },
+    {
+      title: t?.home?.offlineSection || "Offline Access",
+      desc: t?.home?.worksOffline || "Access bundled emergency guides without an internet connection.",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M22.61 16.95A5 5 0 0 0 18 10h-1.26a8 8 0 0 0-7.05-6M5 5a8 8 0 0 0-4 7h1.26a5 5 0 0 0 5 5" />
+          <line x1="1" y1="1" x2="23" y2="23" />
+        </svg>
+      ),
+    },
+    {
+      title: t?.auth?.capabilities?.sos || "SOS & Location Sharing",
+      desc: t?.sos?.sub || "Reach trusted contacts using the supported emergency workflow.",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M4.93 19.07a10 10 0 0 1 0-14.14" />
+          <path d="M7.76 16.24a6 6 0 0 1 0-8.48" />
+          <circle cx="12" cy="12" r="2" />
+          <path d="M16.24 7.76a6 6 0 0 1 0 8.48" />
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+        </svg>
+      ),
+    },
+  ];
+
+  // ─── STEP 2: LANGUAGE SELECTION ──────────────────────────────────────────
   if (step === "language") {
     return (
-      <div style={pageStyle}>
-        <style>{commonCss}</style>
-        <div style={singleCardWrap}>
-          <div style={{ ...cardStyle, maxWidth: "560px" }}>
-            <div style={brandRow}>
-              <span style={brandDot} />
-              <span style={brandText}>ResQ AI</span>
-            </div>
-            <h1 style={titleStyle}>Choose your languages</h1>
-            <p style={subtitleStyle}>
-              We respond in the same language you write in. The first one is your default.
-            </p>
-
-            <div style={previewCard}>
-              <div style={previewRow}>
-                <span style={previewBot}>🤖</span>
-                <p style={previewText}>{aiLine}</p>
-              </div>
-            </div>
-
-            <div style={chipsRow}>
-              {selectedLangs.map((code, i) => {
-                const l = LANGS.find((x) => x.code === code);
-                return (
-                  <span key={code} style={{
-                    ...chip,
-                    background: i === 0 ? tokens.color.text : tokens.color.surfaceSubtle,
-                    color: i === 0 ? "#fff" : tokens.color.text,
-                    borderColor: i === 0 ? tokens.color.text : tokens.color.border,
-                  }}>
-                    {l?.native}
-                    {selectedLangs.length > 1 && (
-                      <button
-                        type="button"
-                        style={{ ...chipRemove, color: i === 0 ? "rgba(255,255,255,0.7)" : tokens.color.textSubtle }}
-                        onClick={() => toggleLang(code)}
-                        aria-label={`Remove ${l?.native}`}
-                      >×</button>
-                    )}
-                  </span>
-                );
-              })}
-            </div>
-            <p style={countText}>{selectedLangs.length} of 5 selected</p>
-
-            <div style={langGrid}>
-              {LANGS.map((lang) => {
-                const isSel = selectedLangs.includes(lang.code);
-                const isDis = !isSel && selectedLangs.length >= 5;
-                return (
-                  <button
-                    key={lang.code}
-                    type="button"
-                    style={{
-                      ...langCard,
-                      borderColor: isSel ? tokens.color.text : tokens.color.border,
-                      background: isSel ? tokens.color.surfaceSubtle : tokens.color.surface,
-                      opacity: isDis ? 0.4 : 1,
-                      cursor: isDis ? "not-allowed" : "pointer",
-                    }}
-                    onClick={() => !isDis && toggleLang(lang.code)}
-                    disabled={isDis}
-                  >
-                    <div style={langNative}>{lang.native}</div>
-                    <div style={langRegion}>{lang.region}</div>
-                    {isSel && <span style={langCheck}>✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              style={{ ...S.primaryBtn, width: "100%", marginTop: "20px", padding: "14px", fontSize: "15px" }}
-              onClick={handleLangSave}
-            >
-              Continue →
-            </button>
-            <p style={footerStyle}>
-              AI replies in the language you write in — including transliterated Hindi/Tamil/Telugu.
-            </p>
+      <div className="auth-page">
+        {langModalOpen && <LangPickerModal onClose={() => setLangModalOpen(false)} />}
+        {/* Header */}
+        <header className="auth-header">
+          <div className="auth-brand">
+            <BrandLogo variant="compact" size={38} theme="light" showTagline={true} />
           </div>
-        </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <button
+              type="button"
+              className="auth-lang-btn"
+              onClick={() => setLangModalOpen(true)}
+              title={t?.nav?.changeLanguages || "Change language"}
+              style={{
+                background: "rgba(15,23,42,0.06)",
+                border: "1px solid rgba(15,23,42,0.12)",
+                borderRadius: "999px",
+                padding: "6px 12px",
+                fontSize: "13px",
+                fontWeight: "600",
+                color: "#0f172a",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              🌐 <span>{currentPrimary}</span>
+            </button>
+            <a href="tel:112" className="auth-emergency-action" title="Call Emergency Services (112)">
+              <span className="auth-emergency-dot" />
+              <span className="emergency-label-full">{t?.nav?.emergencyCall || "Emergency: Call 112"}</span>
+              <span className="emergency-label-short" style={{ display: "none" }}>112</span>
+            </a>
+          </div>
+        </header>
+
+        {/* Content */}
+        <main className="auth-main">
+          <div className="auth-lang-wrap">
+            <div className="auth-lang-card">
+              <div className="auth-lang-badge">{t?.auth?.step2Badge || "Step 2 of 2 · Preferences"}</div>
+              <h1 className="auth-lang-title">{t?.auth?.step2Title || "Choose your language"}</h1>
+              <p className="auth-lang-desc">
+                {t?.auth?.step2Desc || "Select your active language for emergency guidance and assistance."}
+              </p>
+
+              {/* AI Persona Preview Bubble */}
+              <div className="auth-ai-bubble" role="status" style={{ display: "flex", gap: "12px", padding: "12px 14px", background: "#f8fafc", borderRadius: "12px", marginBottom: "20px", border: "1px solid #e2e8f0" }}>
+                <div className="auth-ai-avatar" aria-hidden="true">
+                  <BrandLogo variant="icon" size={24} isDecorative={true} alt="" />
+                </div>
+                <div className="auth-ai-content">
+                  <span className="auth-ai-name" style={{ fontWeight: 700, fontSize: "13px", color: "#0f172a" }}>ResQ AI</span>
+                  <p className="auth-ai-text" style={{ margin: "2px 0 0", fontSize: "13px", color: "#334155" }}>{aiLine}</p>
+                </div>
+              </div>
+
+              {/* Languages Grid */}
+              <div className="auth-lang-grid" role="radiogroup" aria-label="Available languages">
+                {SUPPORTED_LANGUAGES.map((l) => {
+                  const isSelected = language === l.name;
+                  return (
+                    <button
+                      key={l.code}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      className={`auth-lang-tile ${isSelected ? "selected" : ""}`}
+                      onClick={() => setLanguage(l.name)}
+                      style={{
+                        padding: "12px",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        gap: "4px",
+                        cursor: "pointer",
+                        position: "relative",
+                        border: isSelected ? "2px solid #4f46e5" : "1px solid #e2e8f0",
+                        borderRadius: "14px",
+                        background: isSelected ? "#f5f7ff" : "#ffffff",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "8px",
+                          background: isSelected ? "rgba(79,70,229,0.15)" : "#f1f5f9",
+                          color: isSelected ? "#4338ca" : "#334155",
+                          fontWeight: 800,
+                          fontSize: "15px",
+                        }}
+                      >
+                        {l.scriptId}
+                      </span>
+                      <div className="auth-tile-native" style={{ marginTop: "4px" }}>{l.nativeName}</div>
+                      <div className="auth-tile-region">{l.name} · {l.region}</div>
+                      {isSelected && <span className="auth-tile-check" aria-hidden="true" style={{ background: "#4f46e5" }}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Save & Finish Button */}
+              <button
+                type="button"
+                className="auth-lang-submit-btn"
+                onClick={() => navigate("/")}
+              >
+                {t?.auth?.continueBtn ? `${t.auth.continueBtn} (${currentPrimary}) →` : `Continue with ${currentPrimary} →`}
+              </button>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
-  // ─── AUTH STEP — split screen ───────────────────────────────────────────
+  // ─── STEP 1: AUTHENTICATION (SIGN IN / CREATE ACCOUNT) ────────────────────
   return (
-    <div style={pageStyle}>
-      <style>{commonCss}</style>
-      <div className="login-split" style={splitWrap}>
-        {/* Left marketing pane */}
-        <aside className="login-left" style={leftPane}>
-          <div>
-            <div style={brandRow}>
-              <span style={brandDot} />
-              <span style={{ ...brandText, color: "rgba(255,255,255,0.7)" }}>ResQ AI</span>
+    <div className="auth-page">
+      {langModalOpen && <LangPickerModal onClose={() => setLangModalOpen(false)} />}
+      {/* Top Emergency & Brand Header */}
+      <header className="auth-header">
+        <div className="auth-brand">
+          <BrandLogo variant="compact" size={38} theme="light" showTagline={true} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <button
+            type="button"
+            className="auth-lang-btn"
+            onClick={() => setLangModalOpen(true)}
+            title={t?.nav?.changeLanguages || "Change language"}
+            aria-label={t?.nav?.changeLanguages || "Change language"}
+            style={{
+              background: "rgba(255, 255, 255, 0.08)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1.5px solid rgba(99, 102, 241, 0.5)",
+              borderRadius: "9999px",
+              padding: "6px 14px 6px 8px",
+              fontSize: "13px",
+              fontWeight: "700",
+              color: "#ffffff",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+              boxShadow: "0 4px 16px rgba(0, 0, 0, 0.3), 0 0 14px rgba(99, 102, 241, 0.25)",
+            }}
+          >
+            <span
+              style={{
+                width: "28px",
+                height: "28px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #4f46e5, #6366f1)",
+                color: "#ffffff",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "13px",
+                fontWeight: "800",
+                boxShadow: "0 2px 6px rgba(79, 70, 229, 0.4)",
+              }}
+            >
+              {currentLangObj?.scriptId || "EN"}
+            </span>
+            <span style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: "1.15" }}>
+              <span style={{ fontSize: "9.5px", textTransform: "uppercase", letterSpacing: "0.06em", color: "#a5b4fc", fontWeight: "700" }}>
+                {t?.nav?.languages || "Language"}
+              </span>
+              <span style={{ fontSize: "13px", fontWeight: "700", color: "#ffffff" }}>
+                {currentLangObj?.nativeName || currentPrimary}
+              </span>
+            </span>
+            <span style={{ fontSize: "10px", color: "#94a3b8", marginLeft: "2px" }}>▼</span>
+          </button>
+          <a href="tel:112" className="auth-emergency-action" title="Immediate life threat: Dial 112 directly">
+            <span className="auth-emergency-dot" />
+            <span className="emergency-label-full">{t?.nav?.emergencyCall || "Immediate Emergency: Call 112"}</span>
+          </a>
+        </div>
+      </header>
+
+      {/* Main Split Layout */}
+      <main className="auth-main">
+        <div className="auth-container">
+          {/* Left Column: Product Information */}
+          <aside className="auth-info-col">
+            <div className="auth-hero-brand" style={{ marginBottom: "20px" }}>
+              <BrandLogo variant="full" size={130} showTagline={false} />
             </div>
-            <h1 style={leftTitle}>
-              AI emergency response<br />in your language.<br />
-              <span style={leftTitleAccent}>Works offline.</span>
-            </h1>
-            <p style={leftSub}>
-              Designed for the moments when seconds matter and networks fail.
-              Built for India's 22 official languages.
+            <div className="auth-eyebrow">
+              <span className="auth-eyebrow-indicator" aria-hidden="true" />
+              <span>{t?.auth?.companionEyebrow || "AI-Assisted Emergency Companion"}</span>
+            </div>
+            <h1 className="auth-headline">{t?.auth?.heroHeadline || "Help when every second matters."}</h1>
+            <p className="auth-subhead">
+              {t?.auth?.heroSubhead || "Emergency guidance you can understand, in a language you know, even when connectivity is limited."}
             </p>
 
-            <div style={featuresList}>
-              {FEATURES.map((f) => (
-                <div key={f.title} style={featureRow}>
-                  <span style={featureIcon}>{f.icon}</span>
-                  <div>
-                    <div style={featureTitle}>{f.title}</div>
-                    <div style={featureDesc}>{f.desc}</div>
+            {/* Core Capability Highlights */}
+            <div className="auth-capabilities" role="list">
+              {capabilities.map((cap) => (
+                <div key={cap.title} className="auth-cap-item" role="listitem">
+                  <div className="auth-cap-icon-box" aria-hidden="true">
+                    {cap.icon}
+                  </div>
+                  <div className="auth-cap-content">
+                    <span className="auth-cap-title">{cap.title}</span>
+                    <span className="auth-cap-desc">{cap.desc}</span>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
 
-          <div style={leftFooter}>
-            <span style={{ ...statusDotInverse }} />
-            <span>Hackathon prototype · v0.1</span>
-          </div>
-        </aside>
-
-        {/* Right form pane */}
-        <main style={rightPane}>
-          <div style={cardStyle}>
-            <h1 style={titleStyle}>
-              {mode === "login" ? "Welcome back" : "Create your account"}
-            </h1>
-            <p style={subtitleStyle}>
-              {mode === "login"
-                ? "Log in to access your trusted contacts and AI guidance."
-                : "Sign up to set up SOS contacts and personalized AI in your language."}
-            </p>
-
-            <div style={tabsStyle}>
-              <button
-                type="button"
-                style={{
-                  ...tabStyle,
-                  color: mode === "login" ? tokens.color.text : tokens.color.textSubtle,
-                  borderBottomColor: mode === "login" ? tokens.color.text : "transparent",
-                }}
-                onClick={() => { setMode("login"); setError(""); }}
-              >Log in</button>
-              <button
-                type="button"
-                style={{
-                  ...tabStyle,
-                  color: mode === "signup" ? tokens.color.text : tokens.color.textSubtle,
-                  borderBottomColor: mode === "signup" ? tokens.color.text : "transparent",
-                }}
-                onClick={() => { setMode("signup"); setError(""); }}
-              >Sign up</button>
-            </div>
-
-            <button
-              type="button"
-              style={{
-                ...S.secondaryBtn,
-                width: "100%", padding: "12px", fontSize: "14px",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
-              }}
-              onClick={handleGoogle}
-              disabled={loading}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            {/* Privacy & Trust Statement */}
+            <div className="auth-trust-note">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              Continue with Google
-            </button>
-
-            <div style={dividerStyle}>
-              <div style={dividerLine} /><span style={dividerText}>or</span><div style={dividerLine} />
+              <span>{t?.auth?.privacyNote || "Private by design. Your contacts and emergency preferences remain stored locally on your device."}</span>
             </div>
+          </aside>
 
-            <form onSubmit={handleAuth}>
-              {mode === "signup" && (
-                <div style={fieldStyle}>
-                  <label style={labelStyle}>Full name</label>
-                  <input style={S.input} type="text" placeholder="Aditya Kumar" value={name} onChange={(e) => setName(e.target.value)} />
+          {/* Right Column: Authentication Card */}
+          <section className="auth-card-wrap">
+            <div className="auth-card">
+
+
+              {/* Tab Selector */}
+              <div className="auth-tabs" aria-label="Authentication modes">
+                <button
+                  type="button"
+                  id="tab-login"
+                  className={`auth-tab-btn ${mode === "login" ? "active" : ""}`}
+                  onClick={() => { setMode("login"); setError(""); }}
+                >
+                  {t?.auth?.loginTab || "Log in"}
+                </button>
+                <button
+                  type="button"
+                  id="tab-signup"
+                  className={`auth-tab-btn ${mode === "signup" ? "active" : ""}`}
+                  onClick={() => { setMode("signup"); setError(""); }}
+                >
+                  {t?.auth?.signupTab || "Sign up"}
+                </button>
+              </div>
+
+              {/* Header Info */}
+              <div id="auth-form-panel" role="tabpanel" aria-labelledby={mode === "login" ? "tab-login" : "tab-signup"}>
+                <h2 className="auth-form-title">
+                  {mode === "login"
+                    ? (t?.auth?.welcomeBack || "Welcome back")
+                    : (t?.auth?.createAccount || "Create your account")}
+                </h2>
+                <p className="auth-form-sub">
+                  {mode === "login"
+                    ? (t?.auth?.loginSubtitle || "Sign in to access your account and emergency tools.")
+                    : (t?.auth?.signupSubtitle || "Sign up to set up trusted contacts and personalized emergency guidance.")}
+                </p>
+
+                {/* Authentication Form */}
+                <form className="auth-form" onSubmit={handleAuthSubmit} noValidate>
+                  {/* Full Name (Sign Up only) */}
+                  {mode === "signup" && (
+                    <div className="auth-field">
+                      <label htmlFor="auth-name" className="auth-label">
+                        {t?.auth?.fullName || "Full name"}
+                      </label>
+                      <div className="auth-input-wrap">
+                        <input
+                          id="auth-name"
+                          name="name"
+                          type="text"
+                          className="auth-input"
+                          placeholder={t?.auth?.namePlaceholder || "Aditya Kumar"}
+                          autoComplete="name"
+                          value={name}
+                          onChange={(e) => { setName(e.target.value); setError(""); }}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Email Field */}
+                  <div className="auth-field">
+                    <label htmlFor="auth-email" className="auth-label">
+                      {t?.auth?.email || "Email address"}
+                    </label>
+                    <div className="auth-input-wrap">
+                      <input
+                        id="auth-email"
+                        name="email"
+                        type="email"
+                        className={`auth-input ${error && !email ? "has-error" : ""}`}
+                        placeholder={t?.auth?.emailPlaceholder || "you@example.com"}
+                        autoComplete="email"
+                        value={email}
+                        onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password Field */}
+                  <div className="auth-field">
+                    <label htmlFor="auth-password" className="auth-label">
+                      <span>{t?.auth?.password || "Password"}</span>
+                    </label>
+                    <div className="auth-input-wrap">
+                      <input
+                        id="auth-password"
+                        name="password"
+                        type={showPassword ? "text" : "password"}
+                        className={`auth-input ${error && !password ? "has-error" : ""}`}
+                        placeholder={mode === "signup" ? (t?.auth?.pwHint || "At least 6 characters") : (t?.auth?.passwordPlaceholder || "Enter your password")}
+                        autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                        value={password}
+                        onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        className="auth-pw-toggle"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        tabIndex={0}
+                      >
+                        {showPassword ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    {mode === "signup" && (
+                      <span className="auth-field-hint">{t?.auth?.pwHint || "Must be at least 6 characters."}</span>
+                    )}
+                  </div>
+
+                  {/* Confirm Password Field (Sign Up only) */}
+                  {mode === "signup" && (
+                    <div className="auth-field">
+                      <label htmlFor="auth-confirm-password" className="auth-label">
+                        {t?.auth?.confirmPassword || "Confirm password"}
+                      </label>
+                      <div className="auth-input-wrap">
+                        <input
+                          id="auth-confirm-password"
+                          name="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          className={`auth-input ${error && confirmPassword !== password ? "has-error" : ""}`}
+                          placeholder={t?.auth?.confirmPasswordPlaceholder || "Re-enter your password"}
+                          autoComplete="new-password"
+                          value={confirmPassword}
+                          onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
+                          disabled={loading}
+                        />
+                        <button
+                          type="button"
+                          className="auth-pw-toggle"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                          tabIndex={0}
+                        >
+                          {showConfirmPassword ? (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                              <line x1="1" y1="1" x2="23" y2="23" />
+                            </svg>
+                          ) : (
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Inline Error Notification */}
+                  {error && (
+                    <div className="auth-error-banner" role="alert" aria-live="assertive">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>{error}</span>
+                    </div>
+                  )}
+
+                  {/* Primary CTA */}
+                  <button
+                    type="submit"
+                    className="auth-submit-btn"
+                    disabled={loading}
+                    aria-busy={loading}
+                  >
+                    {loading
+                      ? (mode === "login" ? (t?.auth?.signingIn || "Signing in…") : (t?.auth?.creatingAccount || "Creating account…"))
+                      : (mode === "login" ? (t?.auth?.signInBtn || "Sign in") : (t?.auth?.signUpBtn || "Create account"))}
+                  </button>
+                </form>
+
+                {/* Demo Login CTA */}
+                <div className="auth-divider">
+                  <span className="auth-divider-line" />
+                  <span className="auth-divider-text">{t?.auth?.orQuickDemo || "or quick demo"}</span>
+                  <span className="auth-divider-line" />
                 </div>
-              )}
-              <div style={fieldStyle}>
-                <label style={labelStyle}>Email</label>
-                <input style={S.input} type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <div style={fieldStyle}>
-                <label style={labelStyle}>Password</label>
-                <input style={S.input} type="password" placeholder="At least 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} />
-              </div>
-              {error && <div style={errorBoxStyle}>{error}</div>}
-              <button
-                style={{ ...S.primaryBtn, width: "100%", padding: "13px", fontSize: "15px", marginTop: "8px" }}
-                type="submit"
-                disabled={loading}
-              >
-                {loading ? "Please wait…" : mode === "login" ? "Log in →" : "Create account →"}
-              </button>
-            </form>
 
-            <p style={footerStyle}>🔒 Your data stays on this device until you opt in.</p>
-          </div>
-        </main>
-      </div>
+                <button
+                  type="button"
+                  id="demo-login-btn"
+                  data-testid="demo-login-btn"
+                  className="auth-demo-btn"
+                  onClick={handleDemoLogin}
+                  disabled={loading}
+                  aria-label="Demo login as Dhruv"
+                >
+                  <svg
+                    className="auth-demo-icon"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <polyline points="16 11 18 13 22 9" />
+                  </svg>
+                  <span>
+                    {loading && email === "dhruv@resq.ai"
+                      ? (t?.auth?.signingInAsDhruv || "Signing in as Dhruv…")
+                      : (t?.auth?.demoLogin || "Demo Login (Dhruv)")}
+                  </span>
+                </button>
+
+                {/* Secondary Action Switcher */}
+                <div className="auth-switch-prompt">
+                  {mode === "login" ? (
+                    <span>
+                      {t?.auth?.noAccount || "Don't have an account?"}{" "}
+                      <button
+                        type="button"
+                        className="auth-switch-link"
+                        onClick={() => { setMode("signup"); setError(""); }}
+                      >
+                        {t?.auth?.createAccount || "Create an account"}
+                      </button>
+                    </span>
+                  ) : (
+                    <span>
+                      {t?.auth?.haveAccount || "Already have an account?"}{" "}
+                      <button
+                        type="button"
+                        className="auth-switch-link"
+                        onClick={() => { setMode("login"); setError(""); }}
+                      >
+                        {t?.auth?.signInBtn || "Sign in"}
+                      </button>
+                    </span>
+                  )}
+                </div>
+
+                {/* Emergency Notice */}
+                <p className="auth-card-notice">
+                  {t?.auth?.emergencyNotice || "In an immediate life-threatening emergency, call 112 directly."}
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
   );
 }
-
-// ─── Styles ───────────────────────────────────────────────────────────────
-
-const commonCss = `
-  body { background: ${tokens.color.bg}; }
-  * { -webkit-tap-highlight-color: transparent; }
-  input:focus { border-color: ${tokens.color.primary} !important;
-                box-shadow: 0 0 0 3px rgba(15,23,42,0.06) !important; outline: none; }
-  @media (max-width: 980px) {
-    .login-split { grid-template-columns: 1fr !important; }
-    .login-left { display: none !important; }
-  }
-`;
-
-const pageStyle = {
-  minHeight: "100vh",
-  background: tokens.color.bg,
-  fontFamily: tokens.font.family,
-  color: tokens.color.text,
-};
-
-const splitWrap = {
-  minHeight: "100vh",
-  display: "grid",
-  gridTemplateColumns: "minmax(0, 1.05fr) minmax(0, 1fr)",
-};
-
-const leftPane = {
-  background: `radial-gradient(1200px 800px at 10% 10%, #1e293b 0%, ${tokens.color.text} 60%, #020617 100%)`,
-  color: "#fff",
-  padding: "56px 56px 40px",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-  position: "relative",
-  overflow: "hidden",
-};
-// add pseudo via inline className not available — keeping styling simple
-
-const leftTitle = {
-  fontSize: "44px",
-  fontWeight: 800,
-  lineHeight: 1.15,
-  letterSpacing: "-0.025em",
-  margin: "32px 0 16px",
-  color: "#fff",
-};
-
-const leftTitleAccent = {
-  background: "linear-gradient(135deg, #fca5a5, #ef4444)",
-  WebkitBackgroundClip: "text",
-  WebkitTextFillColor: "transparent",
-  backgroundClip: "text",
-};
-
-const leftSub = {
-  fontSize: "16px",
-  color: "rgba(255,255,255,0.7)",
-  lineHeight: 1.6,
-  margin: "0 0 40px",
-  maxWidth: "440px",
-};
-
-const featuresList = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "20px",
-  maxWidth: "440px",
-};
-
-const featureRow = {
-  display: "flex",
-  gap: "14px",
-  alignItems: "flex-start",
-};
-
-const featureIcon = {
-  fontSize: "22px",
-  width: "40px",
-  height: "40px",
-  borderRadius: tokens.radius.md,
-  background: "rgba(255,255,255,0.06)",
-  border: "1px solid rgba(255,255,255,0.08)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flexShrink: 0,
-};
-
-const featureTitle = {
-  fontSize: "15px",
-  fontWeight: 700,
-  color: "#fff",
-  marginBottom: "2px",
-};
-
-const featureDesc = {
-  fontSize: "13px",
-  color: "rgba(255,255,255,0.6)",
-  lineHeight: 1.5,
-};
-
-const leftFooter = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  fontSize: "12px",
-  color: "rgba(255,255,255,0.4)",
-  fontWeight: 500,
-};
-
-const statusDotInverse = {
-  width: "6px",
-  height: "6px",
-  borderRadius: tokens.radius.pill,
-  background: "#22c55e",
-  boxShadow: "0 0 0 3px rgba(34,197,94,0.18)",
-};
-
-const rightPane = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "40px 24px",
-  background: tokens.color.bg,
-};
-
-const singleCardWrap = {
-  minHeight: "100vh",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "40px 24px",
-};
-
-const cardStyle = {
-  background: tokens.color.surface,
-  border: `1px solid ${tokens.color.border}`,
-  borderRadius: tokens.radius.xl,
-  padding: "36px 32px",
-  width: "100%",
-  maxWidth: "440px",
-  boxShadow: tokens.shadow.lg,
-  boxSizing: "border-box",
-};
-
-const brandRow = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  marginBottom: "24px",
-};
-
-const brandDot = {
-  width: "10px",
-  height: "10px",
-  borderRadius: tokens.radius.pill,
-  background: tokens.color.danger,
-  boxShadow: "0 0 0 3px rgba(220,38,38,0.18)",
-};
-
-const brandText = {
-  fontSize: "13px",
-  fontWeight: 700,
-  letterSpacing: "0.04em",
-  textTransform: "uppercase",
-  color: tokens.color.textMuted,
-};
-
-const titleStyle = {
-  fontSize: "26px",
-  fontWeight: 800,
-  letterSpacing: "-0.02em",
-  color: tokens.color.text,
-  margin: "0 0 6px",
-};
-
-const subtitleStyle = {
-  fontSize: "14px",
-  color: tokens.color.textMuted,
-  lineHeight: 1.5,
-  margin: "0 0 24px",
-};
-
-const tabsStyle = {
-  display: "flex",
-  gap: "20px",
-  borderBottom: `1px solid ${tokens.color.border}`,
-  marginBottom: "20px",
-};
-
-const tabStyle = {
-  background: "transparent",
-  border: "none",
-  padding: "10px 0",
-  fontSize: "14px",
-  fontWeight: 600,
-  cursor: "pointer",
-  fontFamily: tokens.font.family,
-  borderBottom: "2px solid transparent",
-  marginBottom: "-1px",
-};
-
-const dividerStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "10px",
-  margin: "16px 0",
-};
-
-const dividerLine = { flex: 1, height: "1px", background: tokens.color.border };
-const dividerText = { fontSize: "12px", color: tokens.color.textSubtle, fontWeight: 500 };
-
-const fieldStyle = { marginBottom: "12px" };
-
-const labelStyle = {
-  display: "block",
-  fontSize: "12px",
-  fontWeight: 600,
-  color: tokens.color.textMuted,
-  marginBottom: "6px",
-};
-
-const errorBoxStyle = {
-  background: tokens.color.dangerBg,
-  border: `1px solid ${tokens.color.dangerBorder}`,
-  color: tokens.color.danger,
-  padding: "10px 12px",
-  borderRadius: tokens.radius.md,
-  fontSize: "13px",
-  fontWeight: 500,
-  marginBottom: "12px",
-};
-
-const footerStyle = {
-  marginTop: "20px",
-  fontSize: "12px",
-  color: tokens.color.textSubtle,
-  textAlign: "center",
-  lineHeight: 1.5,
-};
-
-// Language step
-const previewCard = {
-  background: tokens.color.surfaceSubtle,
-  border: `1px solid ${tokens.color.border}`,
-  borderRadius: tokens.radius.md,
-  padding: "12px 14px",
-  marginBottom: "18px",
-};
-const previewRow = { display: "flex", gap: "10px", alignItems: "flex-start" };
-const previewBot = {
-  fontSize: "20px", flexShrink: 0,
-  width: "30px", height: "30px",
-  borderRadius: tokens.radius.pill,
-  background: tokens.color.surface,
-  border: `1px solid ${tokens.color.border}`,
-  display: "flex", alignItems: "center", justifyContent: "center",
-};
-const previewText = {
-  fontSize: "13px", color: tokens.color.text, fontWeight: 500, lineHeight: 1.5, margin: 0,
-};
-
-const chipsRow = { display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "6px" };
-const chip = {
-  display: "inline-flex", alignItems: "center", gap: "4px",
-  padding: "5px 12px", borderRadius: tokens.radius.pill,
-  fontSize: "12px", fontWeight: 600, border: "1px solid",
-};
-const chipRemove = {
-  background: "transparent", border: "none", fontSize: "16px",
-  cursor: "pointer", fontFamily: tokens.font.family, padding: 0, lineHeight: 1,
-};
-const countText = {
-  fontSize: "11px", color: tokens.color.textSubtle, margin: "0 0 14px", fontWeight: 500,
-};
-
-const langGrid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(4, 1fr)",
-  gap: "8px",
-  maxHeight: "320px",
-  overflowY: "auto",
-};
-
-const langCard = {
-  position: "relative",
-  border: "1px solid",
-  borderRadius: tokens.radius.md,
-  padding: "12px 8px",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: "3px",
-  fontFamily: tokens.font.family,
-  transition: "border-color 0.15s, background 0.15s",
-};
-const langNative = { fontSize: "14px", fontWeight: 700, color: tokens.color.text };
-const langRegion = { fontSize: "10px", color: tokens.color.textSubtle, fontWeight: 500 };
-const langCheck = {
-  position: "absolute",
-  top: "5px", right: "7px",
-  width: "16px", height: "16px",
-  borderRadius: tokens.radius.pill,
-  background: tokens.color.text,
-  color: "#fff",
-  fontSize: "10px",
-  display: "flex", alignItems: "center", justifyContent: "center",
-  fontWeight: 700,
-};
-

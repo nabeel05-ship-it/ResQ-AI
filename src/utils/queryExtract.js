@@ -3,13 +3,34 @@
 // tutorial video. Without this step, raw user messages like "मेरे बेटे को
 // खांसी हो रही है क्या करूं" go straight to YouTube and return generic noise.
 
+import { detectEmergency } from "./detectEmergency";
+
 const GROQ_KEY = process.env.REACT_APP_GROQ_API_KEY || "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_MODEL = "llama-3.1-8b-instant";
+const GROQ_MODEL = "openai/gpt-oss-20b";
 
 const cache = new Map();
 const cacheKey = (userMsg, aiReply) =>
   `${(userMsg || "").slice(0, 120)}::${(aiReply || "").slice(0, 200)}`;
+
+// Pre-verified, highly educational search queries for known emergencies
+// to avoid irrelevant music videos or unrelated content.
+const CATEGORY_QUERY_MAP = {
+  heart_attack: "heart attack CPR first aid demonstration",
+  choking: "choking Heimlich maneuver demonstration",
+  unconscious: "unconscious person CPR recovery position demonstration",
+  bleeding: "heavy bleeding stop bleeding first aid demonstration",
+  house_fire: "house fire safety evacuation demonstration",
+  gas_leak: "gas leak safety procedures demonstration",
+  road_accident: "road accident first aid demonstration",
+  drowning: "drowning water rescue first aid demonstration",
+  robbery: "robbery home safety self defense",
+  physical_attack: "self defense physical attack escape",
+  earthquake: "earthquake drop cover hold on demonstration",
+  flood: "flood safety survival demonstration",
+  electric_shock: "electric shock first aid demonstration",
+  burns: "severe burn first aid demonstration",
+};
 
 // Heuristic fallback when AI is unavailable — keeps top tokens that aren't
 // stop words and appends a tutorial qualifier.
@@ -37,6 +58,16 @@ export const extractVideoQuery = async (userMessage, aiReply) => {
   if (!safeUser) return null;
   const k = cacheKey(safeUser, aiReply);
   if (cache.has(k)) return cache.get(k);
+
+  // 1. Try offline emergency detection first. 
+  // If it's a known emergency, use the pre-verified educational query.
+  // This guarantees context-awareness and avoids irrelevant API results.
+  const match = detectEmergency(safeUser);
+  if (match && match.subcategoryKey && CATEGORY_QUERY_MAP[match.subcategoryKey]) {
+    const q = CATEGORY_QUERY_MAP[match.subcategoryKey];
+    cache.set(k, q);
+    return q;
+  }
 
   if (!GROQ_KEY) {
     const q = heuristicFallback(safeUser);

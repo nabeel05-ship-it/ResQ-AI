@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef } from "react";
 import { tokens } from "../theme";
 
 // We import Leaflet on demand so the bundle stays lean and we have full

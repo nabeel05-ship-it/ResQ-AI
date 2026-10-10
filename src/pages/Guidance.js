@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { motion, useReducedMotion } from "motion/react";
 import { useAppContext } from "../context/AppContext";
 import { tokens, styles as S } from "../theme";
+import BrandLogo from "../components/BrandLogo";
 import RelatedVideos from "../components/RelatedVideos";
 import { extractVideoQuery } from "../utils/queryExtract";
-import { listenOnce, sttErrorMessage, speak, stopSpeaking } from "../utils/speech";
+import { sttErrorMessage, speak, stopSpeaking } from "../utils/speech";
 import { transcribeAudio } from "../utils/groqAudio";
 import { recordUtterance } from "../utils/recorder";
+import { detectEmergency } from "../utils/detectEmergency";
+import { getTriageTree, getTriageContent } from "../data/triageTrees";
+import { getTranslation } from "../i18n/translations";
 
 // Image to base64 helper
 const toBase64 = (file) => new Promise((res, rej) => {
@@ -20,10 +25,10 @@ const toBase64 = (file) => new Promise((res, rej) => {
 // For production deployment this should be moved behind a serverless proxy.
 const GROQ_KEY = process.env.REACT_APP_GROQ_API_KEY || "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const GROQ_CHAT_MODEL = "llama-3.1-8b-instant";
+const GROQ_CHAT_MODEL = "openai/gpt-oss-20b";
 // Llama 3.2 vision-preview was deprecated by Groq; Llama 4 Scout is the
 // current fast multimodal model with native image support.
-const GROQ_VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const GROQ_VISION_MODEL = "qwen/qwen3.8-27b";
 
 const groqChat = async (messages, model = GROQ_CHAT_MODEL) => {
   if (!GROQ_KEY) {
@@ -174,69 +179,13 @@ const detectLang = (text, fallback = "English") => {
   const roman = detectRomanLang(text, fallback);
   if (roman) return roman;
 
-  // Pure Latin with no Indian-language markers → English.
-  return /[A-Za-z]/.test(text) ? "English" : fallback;
+  // If input is in Latin/English characters or suggestions, respond in user's active emergency language!
+  return fallback;
 };
 
-// UI strings for the Guidance screen. English + Hindi explicit;
-// other languages fall back to English to stay shippable.
-const GUIDANCE_T = {
-  English: {
-    headerSub: "Photo • Speak • Type",
-    imageHint: "Send a photo — AI will see and tell you what to do",
-    imageCardTitle: "Take a photo / Pick from gallery",
-    imageCardSub: "Injuries • Fire • Accidents • Illness — AI recognizes all",
-    pickBelow: "🆘 Or pick a common one:",
-    listen: "🔊 Listen",
-    stopListening: "⏹ Stop",
-    analyzing: "📷 AI is analyzing…",
-    inputPlaceholder: "Type or send a photo 📷",
-    cameraTitle: "Send photo — AI will analyze",
-    photoUserMsg: "📷 [Photo sent]",
-    micTitle: "Voice input",
-  },
-  Hindi: {
-    headerSub: "तस्वीर • बोलें • लिखें",
-    imageHint: "तस्वीर भेजें — AI देखेगा और बताएगा क्या करना है",
-    imageCardTitle: "तस्वीर खींचें / गैलरी से चुनें",
-    imageCardSub: "चोट • आग • दुर्घटना • बीमारी — AI सब पहचानेगा",
-    pickBelow: "🆘 या नीचे से चुनें:",
-    listen: "🔊 सुनें",
-    stopListening: "⏹ बंद करें",
-    analyzing: "📷 AI analyze कर रहा है…",
-    inputPlaceholder: "लिखें या तस्वीर भेजें 📷",
-    cameraTitle: "तस्वीर भेजें — AI analyze करेगा",
-    photoUserMsg: "📷 [तस्वीर भेजी]",
-    micTitle: "वॉइस इनपुट",
-  },
-};
-
-const getGuidanceT = (lang) => GUIDANCE_T[lang] || GUIDANCE_T.English;
-
-const SUGGESTIONS_BY_LANG = {
-  English: [
-    "Heart attack — chest pain",
-    "Someone is choking",
-    "Fire at home",
-    "Road accident",
-    "Person unconscious",
-    "Heavy bleeding",
-    "Gas leak at home",
-    "Earthquake — what to do",
-  ],
-  Hindi: [
-    "दिल का दौरा - सीने में दर्द",
-    "कोई दम घुट रहा है",
-    "घर में आग लग गई",
-    "सड़क दुर्घटना हो गई",
-    "कोई बेहोश हो गया",
-    "बहुत खून बह रहा है",
-    "घर में गैस लीक हो रही है",
-    "भूकंप आया - क्या करूं",
-  ],
-};
-
-const getSuggestions = (lang) => SUGGESTIONS_BY_LANG[lang] || SUGGESTIONS_BY_LANG.English;
+// Connect to centralized 12-language translation engine
+const getGuidanceT = (lang) => getTranslation(lang)?.guidance || {};
+const getSuggestions = (lang) => getTranslation(lang)?.guidance?.suggestions || [];
 
 const styles = {
   page: {
@@ -291,14 +240,6 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-  },
-  brandDot: {
-    width: "8px",
-    height: "8px",
-    borderRadius: tokens.radius.pill,
-    background: tokens.color.danger,
-    boxShadow: "0 0 0 3px rgba(220,38,38,0.18)",
-    flexShrink: 0,
   },
   chatHeadSub: {
     fontSize: "12px",
@@ -358,17 +299,19 @@ const styles = {
   bubble: (role) => ({
     maxWidth: "85%",
     background: role === "user" ? tokens.color.text : tokens.color.surface,
-    color: role === "user" ? "#fff" : tokens.color.text,
+    color: role === "user" ? "#FFFFFF" : tokens.color.text,
     border: role === "user" ? "none" : `1px solid ${tokens.color.border}`,
     borderRadius: tokens.radius.lg,
     padding: "12px 14px",
     boxShadow: role === "user" ? "none" : tokens.shadow.sm,
+    wordBreak: "break-word",
   }),
   msgText: (role) => ({
     fontSize: "15px",
     lineHeight: 1.6,
-    color: role === "user" ? "#fff" : tokens.color.text,
+    color: role === "user" ? "#FFFFFF" : tokens.color.text,
     margin: 0,
+    wordBreak: "break-word",
   }),
   stepBox: {
     display: "flex",
@@ -512,22 +455,20 @@ const styles = {
 
 export default function Guidance() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, selectedLanguages } = useAppContext();
+  const { user, selectedLanguages, t, primaryLang } = useAppContext();
+  const shouldReduceMotion = useReducedMotion();
   const query = location.state?.query || "";
-  const primary = selectedLanguages?.[0] || "English";
-  const gt = getGuidanceT(primary);
-  const suggestionList = getSuggestions(primary);
+  const primary = primaryLang || selectedLanguages?.[0] || "English";
+  const gt = t?.guidance || getGuidanceT(primary);
+  const suggestionList = t?.guidance?.suggestions || getSuggestions(primary);
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [voiceState, setVoiceState] = useState("idle"); // idle | recording | transcribing
   const [voiceLevel, setVoiceLevel] = useState(0);
   const [showSug, setShowSug] = useState(true);
-  const [imgPreview, setImgPreview] = useState(null);
   const [imgAnalyzing, setImgAnalyzing] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -547,6 +488,7 @@ export default function Guidance() {
       initDone.current = true;
       initChat();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Re-init when language changes
@@ -558,14 +500,13 @@ export default function Guidance() {
     initDone.current = true;
     initChat();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLanguages[0]]);
+  }, [primary]);
 
   useEffect(() => {
     messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
   const initChat = async () => {
-    const primary = selectedLanguages[0] || "English";
     const scriptMap = {
       Hindi: "Devanagari", Kannada: "Kannada script", Marathi: "Devanagari",
       Bengali: "Bengali script", Tamil: "Tamil script", Telugu: "Telugu script",
@@ -653,10 +594,10 @@ Max 200 words. Direct. Calm. Life-saving.`;
 
   const doSend = async (text) => {
     if (!text?.trim()) return;
-    const userPrimary = selectedLanguages[0] || "English";
+    const userPrimary = primaryLang || "English";
     // Auto-detect the language of the user's input. If detection is
     // confident (script-based), reply in the same language. Otherwise
-    // fall back to the user's profile language.
+    // fall back to the user's active emergency language.
     const replyLang = detectLang(text, userPrimary);
     const scriptMap = {
       Hindi: "Devanagari", Kannada: "Kannada script", Marathi: "Devanagari",
@@ -669,13 +610,21 @@ Max 200 words. Direct. Calm. Life-saving.`;
     const sysMsg = `You are ResQ AI — India's emergency response AI.
 
 !!!CRITICAL LANGUAGE RULE — DO NOT IGNORE!!!
-- The user wrote their question in ${replyLang}. You MUST reply in ${replyLang}.
+- The user has selected ${replyLang} as their emergency language. You MUST reply in ${replyLang}.
 - Output language: ${replyLang} ONLY
 - Script: ${script} ONLY
-- Writing even ONE word in another language (except proper nouns like CPR, AED, BP) = FAILURE
+- Writing even ONE word in another language (except universal proper nouns like CPR, AED, BP) = FAILURE
 - If ${replyLang} is Hindi: write ONLY in Devanagari script
 - If ${replyLang} is Kannada: write ONLY in ಕನ್ನಡ script
 - If ${replyLang} is Tamil: write ONLY in தமிழ் script
+- If ${replyLang} is Telugu: write ONLY in తెలుగు script
+- If ${replyLang} is Bengali: write ONLY in বাংলা script
+- If ${replyLang} is Marathi: write ONLY in Devanagari script
+- If ${replyLang} is Gujarati: write ONLY in ગુજરાતી script
+- If ${replyLang} is Punjabi: write ONLY in Gurmukhi script
+- If ${replyLang} is Malayalam: write ONLY in മലയാളം script
+- If ${replyLang} is Odia: write ONLY in ଓଡ଼ିଆ script
+- If ${replyLang} is Urdu: write ONLY in Urdu script
 - If ${replyLang} is English: write ONLY in English
 - This rule applies to ALL parts: situation, urgency, steps, phone, hospital
 
@@ -697,7 +646,7 @@ Max 200 words. Be direct and calm.`;
       ...historyRef.current.filter(m => m.role !== "system").slice(-6),
       {
         role: "user",
-        content: `${text}\n\n[The user wrote in ${replyLang}. Your ENTIRE response MUST be in ${replyLang} using ${script}. Do NOT switch languages.]`,
+        content: `${text}\n\n[CRITICAL: Respond ENTIRELY in ${replyLang} using ${script}. Do NOT respond in English or any other language.]`,
       },
     ];
 
@@ -719,17 +668,74 @@ Max 200 words. Be direct and calm.`;
         setTimeout(() => handleSpeak(resp), 300);
       }
     } catch (err) {
-      console.error("Groq error:", err);
-      const errMsgs = {
-        Hindi: "⚠️ कनेक्शन समस्या।\n📞 तुरंत 112 पर कॉल करें",
-        Kannada: "⚠️ ಸಂಪರ್ಕ ಸಮಸ್ಯೆ.\n📞 ತಕ್ಷಣ 112 ಕರೆ ಮಾಡಿ",
-        Tamil: "⚠️ இணைப்பு சிக்கல்.\n📞 உடனே 112 அழைக்கவும்",
-        Telugu: "⚠️ కనెక్షన్ సమస్య.\n📞 వెంటనే 112 కు కాల్ చేయండి",
-        Bengali: "⚠️ সংযোগ সমস্যা।\n📞 অবিলম্বে 112 কল করুন",
-        Marathi: "⚠️ कनेक्शन समस्या.\n📞 लगेच 112 कॉल करा",
-        English: "⚠️ Connection issue.\n📞 Call 112 immediately",
+      console.warn("AI service unavailable, evaluating offline emergency database:", err);
+      const match = detectEmergency(text);
+      const subKey = match?.subcategoryKey;
+      const triageKeyMap = {
+        heart_attack: "heart-attack",
+        choking: "choking",
+        burns: "burns",
+        bleeding: "severe-bleeding",
+        unconscious: "unconscious",
       };
-      setMessages((p) => [...p, { role: "assistant", content: errMsgs[replyLang] || errMsgs.English }]);
+      const triageTreeId = subKey ? triageKeyMap[subKey] : null;
+      const tree = triageTreeId ? getTriageTree(triageTreeId) : null;
+
+      if (tree) {
+        const triageContent = getTriageContent(tree, replyLang);
+        const stepsText = (triageContent.steps || [])
+          .map((s, idx) => `${idx + 1}. ${s.text}`)
+          .join("\n");
+        const redFlagsText = (triageContent.redFlags || [])
+          .map((rf) => `• ${rf}`)
+          .join("\n");
+        const fallbackMsg = [
+          `🚨 ${triageContent.title}`,
+          `⚠️ ${tree.severity === "critical" ? "CRITICAL / EMERGENCY" : "HIGH PRIORITY"}`,
+          redFlagsText ? `🚩 Red Flags:\n${redFlagsText}` : null,
+          `📋 First-aid steps:\n${stepsText}`,
+          `📞 Call ${tree.callNumber} (${triageContent.callLabel}) immediately.`,
+        ].filter(Boolean).join("\n\n");
+        setMessages((p) => [...p, { role: "assistant", content: fallbackMsg }]);
+        if (lastInputViaVoiceRef.current) {
+          lastInputViaVoiceRef.current = false;
+          setTimeout(() => handleSpeak(fallbackMsg), 300);
+        }
+      } else if (match && match.subcategory) {
+        const sub = match.subcategory;
+        const stepsText = (sub.steps || [])
+          .map((s, idx) => `${idx + 1}. ${s.title}: ${s.description}`)
+          .join("\n");
+        const fallbackMsg = [
+          `🚨 ${sub.title}`,
+          `⚠️ Urgency: ${sub.steps?.some((s) => s.critical) ? "CRITICAL / HIGH PRIORITY" : "URGENT"}`,
+          `📋 Immediate Actions:`,
+          stepsText,
+          `📞 Call ${match.category?.emergencyNumber || "112"} (${match.category?.numberLabel || "Emergency"}) immediately.`,
+          `🏥 Hospital: Emergency medical care advised.`,
+        ].join("\n\n");
+        setMessages((p) => [...p, { role: "assistant", content: fallbackMsg }]);
+        if (lastInputViaVoiceRef.current) {
+          lastInputViaVoiceRef.current = false;
+          setTimeout(() => handleSpeak(fallbackMsg), 300);
+        }
+      } else {
+        const errMsgs = {
+          Hindi: "⚠️ AI सेवा ऑफलाइन मोड में है।\n📞 तुरंत 112 पर कॉल करें।\n📋 होम स्क्रीन से ऑफलाइन फर्स्ट-एड गाइड देखें।",
+          Kannada: "⚠️ AI ಸೇವೆ ಆಫ್‌ಲೈನ್ ಆಗಿದೆ.\n📞 ತಕ್ಷಣ 112 ಕರೆ ಮಾಡಿ.\n📋 ಆಫ್‌ಲೈನ್ ಮಾರ್ಗದರ್ಶನ ಬಳಸಿ.",
+          Tamil: "⚠️ AI சேவை ஆஃப்லைனில் உள்ளது.\n📞 உடனே 112 அழைக்கவும்.\n📋 ஆஃப்லைன் வழிகாட்டியைப் பார்க்கவும்.",
+          Telugu: "⚠️ AI సేవ ఆఫ్‌లైన్‌లో ఉంది.\n📞 వెంటనే 112 కు కాల్ చేయండి.\n📋 ఆఫ్‌లైన్ గైడ్ చూడండి.",
+          Bengali: "⚠️ AI পরিষেবা অফলাইন মোডে রয়েছে।\n📞 অবিলম্বে 112 কল করুন।\n📋 অফলাইন গাইড দেখুন।",
+          Marathi: "⚠️ AI सेवा ऑफलाइन मोडमध्ये आहे.\n📞 लगेच 112 कॉल करा.\n📋 ऑफलाइन मार्गदर्शक पहा.",
+          Gujarati: "⚠️ AI સેવા ઑફલાઇન મોડમાં છે.\n📞 તરત જ 112 પર કૉલ કરો.\n📋 હોમ સ્ક્રીન પરથી ઑફલાઇન ફર્સ્ટ-એઇડ ગાઇડ જુઓ.",
+          Punjabi: "⚠️ AI ਸੇਵਾ ਔਫਲਾਈਨ ਮੋਡ ਵਿੱਚ ਹੈ।\n📞 ਤੁਰੰਤ 112 'ਤੇ ਕਾਲ ਕਰੋ।\n📋 ਹੋਮ ਸਕ੍ਰੀਨ ਤੋਂ ਔਫਲਾਈਨ ਫਸਟ-ਏਡ ਗਾਈਡ ਦੇਖੋ।",
+          Malayalam: "⚠️ AI സേവനം ഓഫ്‌ലൈനിലാണ്.\n📞 ഉടൻ 112 വിളിക്കുക.\n📋 ഓഫ്‌ലൈൻ പ്രഥമശുശ്രൂഷാ ഗൈഡ് കാണുക.",
+          Urdu: "⚠️ AI سروس آف لائن موڈ میں ہے۔\n📞 فوری 112 پر کال کریں۔\n📋 ہوم سکرین سے آف لائن گائیڈ دیکھیں۔",
+          Odia: "⚠️ AI ସେବା ଅଫଲାଇନ୍ ମୋଡ୍‌ରେ ଅଛି।\n📞 ତୁରନ୍ତ 112 କଲ୍ କରନ୍ତୁ।\n📋 ମୁଖ୍ୟ ପୃଷ୍ଠାରୁ ଅଫଲାଇନ୍ ପ୍ରାଥମିକ ଚିକିତ୍ସା ଗାଇଡ୍ ଦେଖନ୍ତୁ।",
+          English: "⚠️ AI service unavailable (Offline mode).\n📞 Call 112 immediately.\n📋 Please use the bundled offline first-aid guides on the home screen.",
+        };
+        setMessages((p) => [...p, { role: "assistant", content: errMsgs[replyLang] || errMsgs.English }]);
+      }
     }
     setLoading(false);
   };
@@ -739,7 +745,6 @@ Max 200 words. Be direct and calm.`;
     const file = e.target.files[0];
     if (!file) return;
     const previewUrl = URL.createObjectURL(file);
-    setImgPreview(previewUrl);
     setImgAnalyzing(true);
     setShowSug(false);
     setMessages((p) => [
@@ -789,7 +794,6 @@ Format:
       setMessages((p) => [...p, { role: "assistant", content: errMsg[lang] || errMsg.English }]);
     }
     setImgAnalyzing(false);
-    setImgPreview(null);
     e.target.value = "";
   };
 
@@ -838,7 +842,6 @@ Format:
     if (voiceState === "transcribing") return;
 
     const lang = selectedLanguages[0] || "English";
-    setIsListening(true);
 
     try {
       const ctrl = recordUtterance({
@@ -856,13 +859,11 @@ Format:
       if (!blob || blob.size < 1000) {
         // Empty recording — likely cancelled before any speech.
         setVoiceState("idle");
-        setIsListening(false);
         return;
       }
 
       const transcript = await transcribeAudio(blob, lang);
       setVoiceState("idle");
-      setIsListening(false);
 
       if (!transcript) {
         setMessages((p) => [...p, { role: "assistant", content: "⚠️ I couldn't hear that. Please try again." }]);
@@ -873,7 +874,6 @@ Format:
     } catch (err) {
       console.error("Voice input failed:", err);
       setVoiceState("idle");
-      setIsListening(false);
       setVoiceLevel(0);
       recCtrlRef.current = null;
       let code = "generic";
@@ -885,16 +885,23 @@ Format:
     }
   };
 
-  const renderContent = (text) =>
+  const renderContent = (text, role = "assistant") =>
     text.split("\n").map((line, i) => {
       if (!line.trim()) return <br key={i} />;
+      if (role === "user") {
+        return (
+          <p key={i} style={{ margin: "4px 0", fontSize: "14px", color: "#FFFFFF", lineHeight: 1.6, wordBreak: "break-word" }}>
+            {line}
+          </p>
+        );
+      }
       // Numbered steps
-      if (line.match(/^\d+[\.\)]/)) {
+      if (line.match(/^\d+[.)]/)) {
         return (
           <div key={i} style={styles.stepBox}>
             <span style={styles.stepNum}>{line.match(/^\d+/)[0]}</span>
             <span style={{ fontSize: "14px", lineHeight: "1.5" }}>
-              {line.replace(/^\d+[\.\)]\s*/, "")}
+              {line.replace(/^\d+[.)]\s*/, "")}
             </span>
           </div>
         );
@@ -942,10 +949,10 @@ Format:
   const disabled = loading || !inputText.trim();
 
   const QUICK_NUMS = [
-    { num: "112", label: "All emergencies" },
-    { num: "102", label: "Ambulance" },
-    { num: "101", label: "Fire" },
-    { num: "100", label: "Police" },
+    { num: "112", label: t?.home?.allEmergencies || "All emergencies" },
+    { num: "102", label: t?.home?.ambulance || "Ambulance" },
+    { num: "101", label: t?.home?.fireDept || t?.nearby?.tabs?.fire || "Fire" },
+    { num: "100", label: t?.home?.police || t?.nearby?.tabs?.police || "Police" },
   ];
 
   return (
@@ -1039,7 +1046,7 @@ Format:
         </div>
 
         <div>
-          <p style={styles.sidebarLabel}>Emergency numbers</p>
+          <p style={styles.sidebarLabel}>{t?.guidance?.emergencyNumbers || t?.home?.quickNumbers || "Emergency numbers"}</p>
           <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
             {QUICK_NUMS.map((q) => (
               <a key={q.num} href={`tel:${q.num}`} className="qnum-row">
@@ -1057,7 +1064,7 @@ Format:
         <div style={styles.chatHead}>
           <div>
             <h2 style={styles.chatHeadTitle}>
-              <span style={styles.brandDot} />
+              <BrandLogo variant="icon" size={20} isDecorative={true} alt="" />
               AI guidance
               <span style={styles.chatHeadSub}>· {gt.headerSub}</span>
             </h2>
@@ -1097,7 +1104,7 @@ Format:
           >
             📷 Photo
           </button>
-          {suggestionList.slice(0, 6).map((s, i) => (
+          {showSug && suggestionList.slice(0, 6).map((s, i) => (
             <button
               key={i}
               onClick={() => doSend(s)}
@@ -1202,7 +1209,12 @@ Format:
 
             return (
               <React.Fragment key={i}>
-                <div style={styles.msgRow(msg.role)}>
+                <motion.div
+                  initial={shouldReduceMotion || i === 0 ? false : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  style={styles.msgRow(msg.role)}
+                >
                   <div style={styles.avatar(msg.role)}>
                     {msg.role === "user" ? user?.name?.[0]?.toUpperCase() || "U" : "🤖"}
                   </div>
@@ -1225,7 +1237,7 @@ Format:
                     )}
                     {!msg.isImage && (
                       <div style={styles.msgText(msg.role)}>
-                        {renderContent(msg.content)}
+                        {renderContent(msg.content, msg.role)}
                       </div>
                     )}
                     {msg.role === "assistant" && (
@@ -1238,7 +1250,7 @@ Format:
                       </button>
                     )}
                   </div>
-                </div>
+                </motion.div>
 
                 {/* Related videos shown inline right after the assistant's
                     response — gives the user a tutorial to watch alongside
@@ -1265,7 +1277,12 @@ Format:
           })}
 
           {loading && (
-            <div style={styles.msgRow("assistant")}>
+            <motion.div
+              initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.15 }}
+              style={styles.msgRow("assistant")}
+            >
               <div style={styles.avatar("assistant")}>🤖</div>
               <div style={styles.bubble("assistant")}>
                 <div style={styles.loadingRow}>
@@ -1274,7 +1291,7 @@ Format:
                   <span className="loading-dot" />
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           <div ref={messagesEnd} />
@@ -1339,13 +1356,16 @@ Format:
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && !disabled && doSend(inputText)}
           />
-          <button
+          <motion.button
+            whileHover={disabled || shouldReduceMotion ? undefined : { scale: 1.04 }}
+            whileTap={disabled || shouldReduceMotion ? undefined : { scale: 0.96 }}
+            transition={{ duration: 0.1 }}
             style={{ ...styles.sendBtn(disabled), width: "44px", height: "44px" }}
             onClick={() => !disabled && doSend(inputText)}
             disabled={disabled}
           >
             ➤
-          </button>
+          </motion.button>
         </div>
       </section>
     </div>

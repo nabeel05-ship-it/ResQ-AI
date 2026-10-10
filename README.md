@@ -12,14 +12,18 @@ ResQ AI puts a first-aid expert in everyone's pocket — and crucially, **works 
 
 | Feature | Why it matters |
 |---|---|
-| 🆘 **Hold-to-SOS** | One 2-second hold sends your live GPS + emergency type to pre-saved contacts via WhatsApp/SMS |
+| 🆘 **Hold-to-SOS** | One 2-second hold sends your live GPS + emergency type to pre-saved contacts via WhatsApp/SMS or native share |
 | 📴 **Offline first-aid** | 5 critical guides (heart attack, choking, severe bleeding, burns, unconscious) bundled into the app — render with **zero network** |
-| 🤖 **AI guidance** | When online: Groq-powered LLM with **vision** — point your camera at an injury, get triage |
-| 🌐 **12+ Indian languages** | Hindi, Tamil, Telugu, Bengali, Marathi, Kannada, Gujarati, Punjabi, Malayalam, Urdu, Odia + English. AI replies in same language. |
-| 🥁 **CPR metronome** | Built-in 100 bpm beat (audio + haptic) during cardiac/unconscious flows — push to the rhythm |
-| 📞 **Quick-call tiles** | 112 / 102 / 101 / 100 — one tap dials |
-| 📍 **Nearby services** | Hospitals, police, fire, ambulance with map deep-links |
-| 📱 **Installable PWA** | Add to home screen — feels native |
+| 🛡️ **Offline Emergency Matcher** | Multilingual keyword & alias detection (English, Hindi, Romanized) falls back to structured first-aid guidance with zero API latency |
+| 🤖 **AI Guidance** | When online: Groq-powered fast LLM with chat history, urgency detection, and direct first-responder action steps |
+| 📷 **Camera & Vision Triage** | Point your camera or upload injury photos — multimodal vision classifies emergencies and routes directly to triage trees |
+| 🎙️ **Voice Input & Whisper STT** | Push-to-talk voice recording transcribed via Groq Whisper Large v3 Turbo across Indian and global languages, with text-to-speech audio guidance |
+| 🌐 **12+ Indian Languages** | Hindi, Tamil, Telugu, Bengali, Marathi, Kannada, Gujarati, Punjabi, Malayalam, Urdu, Odia + English. AI replies in the user's selected language |
+| 🥁 **CPR Metronome** | Built-in 100 bpm beat (Web Audio API synth + haptic pulses) during cardiac/unconscious flows — push to the rhythm |
+| 📞 **Quick-Call Tiles** | 112 (All), 102 (Ambulance), 101 (Fire), 100 (Police) — one tap dials directly |
+| 📍 **Nearby Services & Routing** | Live OpenStreetMap Overpass queries for hospitals, police, fire, pharmacies & clinics + Leaflet interactive map with OSRM turn-by-turn routes & curated fallbacks |
+| 📺 **YouTube Video Tutorials** | RapidAPI-powered first-aid video tutorials tailored to the emergency type and query context |
+| 📱 **Installable PWA & Android APK** | Service Worker cache-first app shell + native Capacitor Android wrapper with GPS & haptics |
 
 ## Architecture
 
@@ -28,31 +32,63 @@ ResQ AI puts a first-aid expert in everyone's pocket — and crucially, **works 
 │ React 19 PWA (CRA)                                           │
 │  ├─ Routing: react-router v7                                 │
 │  ├─ State:   AppContext + localStorage                       │
+│  ├─ Maps:    Leaflet + OSRM routing + OpenStreetMap Overpass │
 │  └─ Service Worker: cache-first app shell + triage data      │
 └──────────────────────────────────────────────────────────────┘
                 │
-                ├── Online ────► Groq API (Llama 3.1 chat / 3.2 vision)
+                ├── Online (APIs configured)
+                │    ├─ Groq Chat & Vision: Llama 3.1 8B Instant / Qwen / Llama 4
+                │    ├─ Groq Audio: Whisper Large v3 Turbo (speech-to-text)
+                │    ├─ RapidAPI: YouTube video tutorials (optional)
+                │    └─ Overpass API: Live nearby hospitals, police, fire, clinics
                 │
-                └── Offline ───► Bundled triage trees (src/data/triageTrees.js)
-                                 + IndexedDB / localStorage for contacts & state
+                └── Offline / Network Resilient
+                     ├─ Bundled triage trees (src/data/triageTrees.js)
+                     ├─ Multilingual emergency detector & keyword matcher
+                     ├─ CPR metronome audio + haptic cadence (100 bpm)
+                     ├─ Web Speech API text-to-speech
+                     └─ IndexedDB / localStorage for contacts & profile state
 ```
 
 ## Quickstart (web)
 
 ```bash
+# 1. Install dependencies
 npm install
-cp .env.example .env.local      # paste your Groq key
-npm start                       # dev server on :3000
+
+# 2. Configure environment variables
+cp .env.example .env.local
+
+# 3. Start local development server
+npm start                       # dev server on http://localhost:3000
 ```
+
+### Environment Configuration (`.env.local`)
+
+ResQ AI is built with Create React App, which exposes variables prefixed with `REACT_APP_` to the client-side bundle. Copy `.env.example` to `.env.local` in the project root:
+
+```bash
+cp .env.example .env.local
+```
+
+| Variable Name | Required / Optional | Description |
+|---|---|---|
+| `REACT_APP_GROQ_API_KEY` | Required for online AI | Groq API key used for Llama 3.1 8B Instant chat guidance, multimodal vision classification, and Whisper Large v3 Turbo audio transcription. Get a key at [console.groq.com/keys](https://console.groq.com/keys). |
+| `REACT_APP_RAPIDAPI_KEY` | Optional | RapidAPI key used for fetching relevant first-aid video tutorials in `RelatedVideos.js`. Get a key at [rapidapi.com](https://rapidapi.com). |
+| `REACT_APP_RAPIDAPI_HOST` | Optional | RapidAPI host (default: `youtube-v2.p.rapidapi.com`; alternatively supports `youtube-v31.p.rapidapi.com`). |
+
+> **Security Note:** Never commit `.env.local` to Git. The `.gitignore` file is configured to keep your credentials strictly local. When keys are not configured or the network is offline, the app automatically activates its offline emergency matcher and bundled triage trees.
+
+### Production Build & PWA Testing
 
 For the offline / installable PWA experience, build and serve the production bundle:
 
 ```bash
 npm run build
-npx serve -s build              # service worker only registers in production
+npx serve -s build              # service worker registers in production mode
 ```
 
-Then open in Chrome → DevTools → Application → Service Workers (verify "activated") → toggle "Offline" → reload → app still works.
+Then open in Chrome → DevTools → Application → Service Workers (verify "activated") → toggle "Offline" → reload → app still works without an active internet connection.
 
 ## Mobile app (Android via Capacitor)
 
@@ -113,21 +149,37 @@ npx cap open ios
 src/
 ├── App.js                       Routes + auth guard
 ├── index.js                     Service worker registration
-├── context/AppContext.js        Auth, language, contacts state
+├── theme.js                     Clinical design system tokens & layout constants
+├── context/
+│   └── AppContext.js            Auth, language, contacts state
 ├── components/
-│   ├── SOSButton.js             Hold-to-SOS + contacts CRUD
-│   ├── AIGuide.js               In-app AI chat
-│   └── LangPickerModal.js       Multi-language selector
+│   ├── AppShell.js              Responsive layout wrapper & global navigation
+│   ├── SOSButton.js             Hold-to-SOS + emergency contacts CRUD
+│   ├── AIGuide.js               In-app emergency guidance walkthrough
+│   ├── LangPickerModal.js       Multi-language selector modal (12+ languages)
+│   ├── LeafletMap.js            Interactive OpenStreetMap viewer with route polyline
+│   ├── LocationMap.js           Static / preview coordinate map component
+│   └── RelatedVideos.js         YouTube first-aid video carousel with inline player
 ├── pages/
-│   ├── Login.js                 Email + Google auth + language onboarding
+│   ├── Login.js                 Email + demo auth + language onboarding
 │   ├── Home.js                  Hub: SOS, categories, offline guides, quick calls
 │   ├── Triage.js                Offline first-aid step renderer + CPR metronome
-│   ├── Guidance.js              Online AI chat (Groq Llama)
-│   └── Nearby.js                Categorized nearby services
+│   ├── Guidance.js              AI chat, camera triage, voice STT, & offline fallback
+│   └── Nearby.js                Overpass API services + Leaflet map + OSRM directions
 ├── data/
-│   ├── emergencyData.js         Existing taxonomy (online flow)
-│   └── triageTrees.js           Offline first-aid (bilingual EN/HI)
-└── utils/detectEmergency.js     Keyword-based fallback matcher
+│   ├── emergencyData.js         Emergency categories, numbers & subcategories
+│   └── triageTrees.js           Bundled offline first-aid decision trees (EN/HI)
+└── utils/
+    ├── detectEmergency.js       Multilingual keyword & alias emergency matcher
+    ├── groqVision.js            Groq vision triage classifier & image handling
+    ├── groqAudio.js             Groq Whisper Large v3 Turbo audio transcription
+    ├── speech.js                Web Speech API synthesis (TTS) & STT fallback
+    ├── recorder.js              Audio recorder with volume level analysis
+    ├── queryExtract.js          Emergency query transformer for video search
+    ├── places.js                Overpass API nearby place queries (5km radius)
+    ├── routing.js               OSRM driving/walking/cycling routing engine
+    ├── youtube.js               RapidAPI YouTube video search client
+    └── native.js                Capacitor native API bridges (GPS, haptics, share)
 public/
 ├── manifest.json                PWA install metadata
 └── service-worker.js            Cache-first app shell, network-bypass for API
@@ -146,14 +198,22 @@ public/
 
 ## Roadmap (post-hackathon, in priority order)
 
-1. **Serverless API proxy** — move Groq key off the client (Vercel/Cloudflare Worker)
-2. **Real Firebase Auth** — replace the demo localStorage auth (deps already installed)
-3. **Real Google Places** for Nearby — replace static Delhi list
-4. **Continuous voice mode** — "Hey ResQ, my dad fell" without tapping
-5. **Family/caregiver dashboard** — SOS notifications across family
+1. **Serverless API proxy** — move Groq and RapidAPI keys off the client (Vercel/Cloudflare Worker)
+2. **Real Firebase Auth** — replace the demo localStorage auth (dependencies already installed)
+3. **Google Places API optional fallback** — complement OpenStreetMap Overpass with Google Places for ratings & operating hours
+4. **Continuous voice mode** — hands-free emergency listening ("Hey ResQ, my dad fell")
+5. **Family/caregiver dashboard** — multi-device SOS notifications across family members
 6. **Crowdsourced incident map** — Firestore-backed real-time hazard layer
-7. **Push notifications** — drill reminders, area alerts
-8. **More triage trees** — snake bite, drowning, electric shock, stroke FAST, seizures
+7. **Push notifications** — first-aid drill reminders and local civil defense alerts
+8. **Expanded triage trees** — drowning, electric shock, stroke FAST, seizures, snake bite
+
+## Recent Improvements
+
+- **Offline Emergency Matching Fallback**: If the Groq API is unreachable, unconfigured, or offline, user prompts are automatically parsed via `detectEmergency` across English, Hindi, and Romanized aliases to provide immediate structured first-aid guidance.
+- **Chat Contrast & Accessibility Fix**: Restructured user message bubbles in the AI Guidance interface to ensure high-contrast white text (`#FFFFFF`) against dark backgrounds with robust word-break handling.
+- **Groq Model Modernization**: Upgraded model identifiers to active Groq endpoints across chat (`openai/gpt-oss-20b`), multimodal vision (`qwen/qwen3.8-27b`), and audio transcription (`whisper-large-v3-turbo`).
+- **Interactive OpenStreetMap & OSRM Routing**: Integrated dynamic Overpass API queries for emergency facilities within 5 km and Leaflet turn-by-turn route calculations with curated offline fallbacks.
+- **Video Query Transformer**: Automatic compression and translation of multilingual emergency prompts into focused English tutorial queries for YouTube integration.
 
 ## Disclaimer
 

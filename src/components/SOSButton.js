@@ -80,8 +80,8 @@ const buildMessage = (st, location, emergencyType) => {
 };
 
 export default function SOSButton({ emergencyType }) {
-  const { primaryLang, emergencyContacts, saveEmergencyContacts } = useAppContext();
-  const st = getSOSText(primaryLang);
+  const { primaryLang, emergencyContacts, saveEmergencyContacts, t } = useAppContext();
+  const st = t?.sos || getSOSText(primaryLang);
 
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("idle"); // idle | holding | sending | sent | error

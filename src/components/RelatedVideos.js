@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { tokens } from "../theme";
 import { searchVideos, embedUrl, isYouTubeConfigured } from "../utils/youtube";
+import { useAppContext } from "../context/AppContext";
 
 // Show the top N YouTube videos for `query`. Click → embedded player modal
 // (still inside the app, no leaving the site).
 //
 // `compact` switches the grid for a horizontal-scrollable strip — used
 // inline in chat threads where space is tight.
-export default function RelatedVideos({ query, label = "Watch demonstrations", max = 4, accentColor, compact = false }) {
+export default function RelatedVideos({ query, label, max = 4, accentColor, compact = false }) {
+  const { t } = useAppContext();
+  const displayLabel = label || t?.video?.watchDemo || "Watch demonstrations";
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -24,19 +27,18 @@ export default function RelatedVideos({ query, label = "Watch demonstrations", m
       .catch((err) => {
         if (cancelled) return;
         console.warn("YouTube search failed:", err);
-        setError(err.message || "Couldn't load videos.");
+        setError(err.message || (t?.video?.noVideos || "Couldn't load videos."));
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [query, max, configured]);
+  }, [query, max, configured, t]);
 
   if (!configured) {
     return (
       <div style={emptyCard}>
-        <div style={emptyTitle}>📺 {label}</div>
+        <div style={emptyTitle}>📺 {displayLabel}</div>
         <p style={emptyHint}>
-          Set <code style={code}>REACT_APP_RAPIDAPI_KEY</code> in <code style={code}>.env.local</code> to enable
-          YouTube tutorial suggestions.
+          {t?.video?.setKey || "Set REACT_APP_RAPIDAPI_KEY in .env.local to enable YouTube tutorial suggestions."}
         </p>
       </div>
     );
@@ -323,13 +325,6 @@ const emptyHint = {
   lineHeight: 1.5,
 };
 
-const code = {
-  background: tokens.color.surfaceSubtle,
-  padding: "1px 6px",
-  borderRadius: tokens.radius.sm,
-  fontFamily: tokens.font.mono,
-  fontSize: 11,
-};
 
 // Modal
 const modalOverlay = {

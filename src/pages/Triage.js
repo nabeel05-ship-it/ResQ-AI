@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "motion/react";
 import { useAppContext } from "../context/AppContext";
 import { getTriageTree, getTriageContent } from "../data/triageTrees";
 import SOSButton from "../components/SOSButton";
@@ -67,10 +68,22 @@ const tx = (lang) => TXT[lang] || TXT.English;
 export default function Triage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { primaryLang } = useAppContext();
+  const { primaryLang, t: appT } = useAppContext();
+  const shouldReduceMotion = useReducedMotion();
   const tree = useMemo(() => getTriageTree(id), [id]);
   const content = useMemo(() => getTriageContent(tree, primaryLang), [tree, primaryLang]);
-  const t = tx(primaryLang);
+  
+  const rawTriage = appT?.triage || {};
+  const t = {
+    ...tx(primaryLang),
+    ...rawTriage,
+    redFlags: rawTriage.criticalSigns || rawTriage.redFlags || tx(primaryLang).redFlags,
+    done: rawTriage.markComplete || rawTriage.done || tx(primaryLang).done,
+    cprStart: rawTriage.startCpr || rawTriage.cprStart || tx(primaryLang).cprStart,
+    cprStop: rawTriage.stopCpr || rawTriage.cprStop || tx(primaryLang).cprStop,
+    stepOf: rawTriage.step || rawTriage.stepOf || tx(primaryLang).stepOf,
+    stepsLabel: rawTriage.steps || rawTriage.stepsLabel || tx(primaryLang).stepsLabel,
+  };
 
   const [stepIdx, setStepIdx] = useState(0);
   const [cprOn, setCprOn] = useState(false);
@@ -287,11 +300,17 @@ export default function Triage() {
 
             {/* Step card */}
             {!isCompleted && step && (
-              <div style={{
-                ...S.card,
-                padding: "28px",
-                borderLeft: `4px solid ${meta.color}`,
-              }}>
+              <motion.div
+                key={stepIdx}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                style={{
+                  ...S.card,
+                  padding: "28px",
+                  borderLeft: `4px solid ${meta.color}`,
+                }}
+              >
                 <div style={stepLabelRow}>
                   <span style={{ ...stepBadge, color: meta.color, background: `${meta.color}14` }}>
                     {meta.label}
@@ -303,8 +322,10 @@ export default function Triage() {
                 <p style={stepBody}>{step.text}</p>
 
                 {step.type === "call" && (
-                  <a
+                  <motion.a
                     href={`tel:${tree.callNumber}`}
+                    whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                     style={{
                       ...S.primaryBtn,
                       background: tokens.color.danger,
@@ -318,30 +339,39 @@ export default function Triage() {
                     }}
                   >
                     📞 {t.callNow} — {tree.callNumber}
-                  </a>
+                  </motion.a>
                 )}
-              </div>
+              </motion.div>
             )}
 
             {isCompleted && (
-              <div style={{ ...S.card, padding: "48px 24px", textAlign: "center" }}>
+              <motion.div
+                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.2 }}
+                style={{ ...S.card, padding: "48px 24px", textAlign: "center" }}
+              >
                 <div style={completedDot}>✓</div>
                 <p style={{ fontSize: "16px", fontWeight: 600, color: tokens.color.text, margin: "16px 0 0" }}>
                   {t.completed}
                 </p>
-              </div>
+              </motion.div>
             )}
 
             {/* Nav */}
             <div style={{ display: "flex", gap: "12px" }}>
-              <button
+              <motion.button
+                whileHover={stepIdx === 0 || shouldReduceMotion ? undefined : { scale: 1.02 }}
+                whileTap={stepIdx === 0 || shouldReduceMotion ? undefined : { scale: 0.98 }}
                 style={{ ...S.secondaryBtn, flex: 1, padding: "14px", opacity: stepIdx === 0 ? 0.4 : 1 }}
                 onClick={prev}
                 disabled={stepIdx === 0}
               >
                 {t.prevStep}
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={isCompleted || shouldReduceMotion ? undefined : { scale: 1.02 }}
+                whileTap={isCompleted || shouldReduceMotion ? undefined : { scale: 0.98 }}
                 style={{
                   ...S.primaryBtn,
                   flex: 2,
@@ -352,7 +382,7 @@ export default function Triage() {
                 disabled={isCompleted}
               >
                 {stepIdx === total - 1 ? t.done : t.nextStep}
-              </button>
+              </motion.button>
             </div>
 
             <button
@@ -374,7 +404,7 @@ export default function Triage() {
             {/* YouTube demonstrations for this guide. */}
             <RelatedVideos
               query={VIDEO_QUERIES[id] || title}
-              label="Watch demonstrations"
+              label={appT?.video?.watchDemo || "Watch demonstrations"}
               max={4}
               accentColor={tree.color}
             />

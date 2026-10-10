@@ -5,9 +5,9 @@
 
 const GROQ_KEY = process.env.REACT_APP_GROQ_API_KEY || "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-// Llama 3.2 vision-preview was deprecated; Llama 4 Scout is the current
+// Llama 3.2 vision-preview was deprecated; Qwen is the current
 // fast multimodal model on Groq with native image support.
-const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const VISION_MODEL = "qwen/qwen3.8-27b";
 
 // Categories the model is allowed to output. Match the offline triage tree
 // IDs where one exists; remaining ones route to AI chat.
